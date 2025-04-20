@@ -3,7 +3,7 @@
 # Run jekyll serve and then launch the site
 
 prod=false
-command="bundle exec jekyll s -l"
+command="bundle exec jekyll s -l --baseurl /blogs"  # Add --baseurl /blogs
 host="127.0.0.1"
 
 help() {
