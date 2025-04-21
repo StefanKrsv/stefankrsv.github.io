@@ -59,18 +59,18 @@
         '',
         'Loading system...',
         '',
-        'user@site:~$ curl -L /home',
+        'user@site:~$ curl -L /blog',
         'Redirecting...',
-        'Visit → /home',
+        'Visit → /blog',
       ];
 
-      let delay = 50;
+      let delay = 25;
       let i = 0;
       let line = 0;
 
       function typeLine() {
         if (line >= lines.length) {
-          terminal.innerHTML += `\nuser@site:~$ <a href="/home">Click here to enter</a>\n`;
+          terminal.innerHTML += `\nuser@site:~$ <a href="/blog">Click here to enter</a>\n`;
           return;
         }
 
