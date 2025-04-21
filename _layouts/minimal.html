@@ -35,13 +35,11 @@
         }
       }
 
-      a {
-        color: #33aaff;
+      .terminal-link {
+        color: #33ff33;
+        font-family: inherit;
         text-decoration: underline;
-      }
-
-      a:hover {
-        color: #66ccff;
+        cursor: pointer;
       }
     </style>
   </head>
@@ -54,9 +52,9 @@
       const cursor = document.getElementById('cursor');
 
       const lines = [
-        ` ╔╦╗╔═╗╔═╗╔╦╗
-  ║ ║╣ ╚═╗ ║
-  ╩ ╚═╝╚═╝ ╩ `,
+        `╔╦╗╔═╗╔═╗╔╦╗
+ ║ ║╣ ╚═╗ ║
+ ╩ ╚═╝╚═╝ ╩ `,
 
         '',
         'Loading system...',
@@ -106,13 +104,18 @@
 
         typing = false;
         fullText = lines.join('\n') + '\n\nuser@site:~$ ';
-        renderTerminal(fullText + `<a href="/blog">Click here to enter</a>\n`);
+        renderTerminal(
+          fullText + `<span class="terminal-link" onclick="window.location.href='/blog'">./enter</span>\n`
+        );
         cursor.style.display = 'none';
       }
 
       function endSequence() {
         typing = false;
-        renderTerminal(fullText + `\nuser@site:~$ <a href="/blog">Click here to enter</a>\n`);
+        fullText = lines.join('\n') + '\n\nuser@site:~$ ';
+        renderTerminal(
+          fullText + `<span class="terminal-link" onclick="window.location.href='/blog'">./enter</span>\n`
+        );
         cursor.style.display = 'none';
       }
 
