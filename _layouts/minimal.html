@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page.title }}</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #0d0d0d;
+        color: #33ff33;
+        font-family: 'Courier New', monospace;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      #terminal {
+        white-space: pre-wrap;
+        padding: 2rem;
+        font-size: 1.1rem;
+        line-height: 1.5;
+      }
+
+      .blink {
+        animation: blink 1s step-start infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      a {
+        color: #33aaff;
+        text-decoration: underline;
+      }
+
+      a:hover {
+        color: #66ccff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="terminal"></div>
+
+    <script>
+      const terminal = document.getElementById('terminal');
+
+      const lines = [
+        `██████╗ ███████╗███████╗███╗   ███╗██╗███╗   ██╗
+  ██╔══██╗██╔════╝██╔════╝████╗ ████║██║████╗  ██║
+  ██║  ██║█████╗  █████╗  ██╔████╔██║██║██╔██╗ ██║
+  ██║  ██║██╔══╝  ██╔══╝  ██║╚██╔╝██║██║██║╚██╗██║
+  ██████╔╝███████╗███████╗██║ ╚═╝ ██║██║██║ ╚████║
+  ╚═════╝ ╚══════╝╚══════╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝`,
+        '',
+        'Loading system...',
+        '',
+        'user@site:~$ curl -L /home',
+        'Redirecting...',
+        'Visit → /home',
+      ];
+
+      let delay = 50;
+      let i = 0;
+      let line = 0;
+
+      function typeLine() {
+        if (line >= lines.length) {
+          terminal.innerHTML += `\nuser@site:~$ <a href="/home">Click here to enter</a>\n`;
+          return;
+        }
+
+        const currentLine = lines[line];
+        if (i < currentLine.length) {
+          terminal.innerHTML += currentLine.charAt(i);
+          i++;
+          setTimeout(typeLine, delay);
+        } else {
+          terminal.innerHTML += '\n';
+          i = 0;
+          line++;
+          setTimeout(typeLine, delay);
+        }
+      }
+
+      typeLine();
+    </script>
+  </body>
+</html>
