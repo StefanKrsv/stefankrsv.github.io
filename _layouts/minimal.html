@@ -61,23 +61,32 @@
       .ascii-art {
         color: #33ff33;
       }
+      /* Add padding at the end of terminal to ensure space for mobile scrolling */
+      #terminal-padding {
+        height: 4.5rem; /* Approximately 2 lines of text plus some extra space */
+        display: block;
+      }
     </style>
   </head>
   <body>
-    <div id="terminal-container"><span id="terminal"></span><span id="cursor">█</span></div>
+    <div id="terminal-container">
+      <span id="terminal"></span>
+      <span id="cursor">█</span>
+      <span id="terminal-padding"></span>
+    </div>
     <script>
       const terminal = document.getElementById('terminal');
       const cursor = document.getElementById('cursor');
       const terminalContainer = document.getElementById('terminal-container');
-
       const commandLines = [
         {
           prompt: '',
-          content: `<span class="ascii-art"> _
-| |_ ___ ___ ___ ___
-| __/ _ \\ '_  \\_ \\ _ \\
-| || __/ | | | | | | |
-\\__\\___|_| |_| |_| |_|</span>`,
+          content: `<span class="ascii-art">__
+|  |_.-----.----.--------.
+|   _|  -__|   _|        |
+|____|_____|__| |__|__|__|
+
+</span>`,
         },
         {
           prompt: '<span class="white-text">SH Not A Corporation. All rights reserved.\n</span>',
@@ -88,19 +97,17 @@
           content: `<span class="white-text">curl -fsSL ${window.location.href}llm.sh | sh</span>`,
         },
       ];
-
       const loadingBars = [
-        { text: '<span class="white-text">[=>                               ] 10%</span>', delay: 150 },
-        { text: '<span class="white-text">[=====>                           ] 25%</span>', delay: 200 },
-        { text: '<span class="white-text">[========>                        ] 40%</span>', delay: 180 },
-        { text: '<span class="white-text">[=============>                   ] 50%</span>', delay: 150 },
-        { text: '<span class="white-text">[================>                ] 65%</span>', delay: 170 },
-        { text: '<span class="white-text">[===================>             ] 75%</span>', delay: 190 },
-        { text: '<span class="white-text">[=======================>         ] 85%</span>', delay: 160 },
-        { text: '<span class="white-text">[=============================>   ] 95%</span>', delay: 140 },
+        { text: '<span class="white-text">[=> ] 10%</span>', delay: 150 },
+        { text: '<span class="white-text">[=====> ] 25%</span>', delay: 200 },
+        { text: '<span class="white-text">[========> ] 40%</span>', delay: 180 },
+        { text: '<span class="white-text">[=============> ] 50%</span>', delay: 150 },
+        { text: '<span class="white-text">[================> ] 65%</span>', delay: 170 },
+        { text: '<span class="white-text">[===================> ] 75%</span>', delay: 190 },
+        { text: '<span class="white-text">[=======================> ] 85%</span>', delay: 160 },
+        { text: '<span class="white-text">[=============================> ] 95%</span>', delay: 140 },
         { text: '<span class="white-text">[=================================] 100%</span>', delay: 130 },
       ];
-
       const installationSequence = [
         { text: '<span class="white-text">Downloading llm.sh...</span>', delay: 100, bar: true },
         { text: '<span class="white-text">Verifying package...</span>', delay: 400 },
@@ -109,7 +116,6 @@
         { text: '<span class="white-text">Setting up model weights: complete</span>', delay: 250 },
         { text: '<span class="white-text">LLM v3.7.2 installed successfully</span>', delay: 200 },
       ];
-
       const additionalCommands = [
         {
           prompt:
@@ -121,7 +127,6 @@
           content: '<span class="white-text">who are you?</span>',
         },
       ];
-
       const textResponse = [
         {
           text: '<span class="white-text">Hi there, I\'m Stepan. You might know me from YouTube, another platform, or maybe I gave you this link.</span>',
@@ -136,14 +141,12 @@
           delay: 10,
         },
       ];
-
       const blogCommand = [
         {
           prompt: '<span class="white-text">>>></span> ',
           content: '<span class="white-text">blog?</span>',
         },
       ];
-
       const blogResponse = [
         { text: '<span class="white-text">Check out our full story collection at:', delay: 10 },
         {
@@ -156,7 +159,6 @@
           delay: 10,
         },
       ];
-
       let delay = 20;
       let i = 0;
       let commandIndex = 0;
@@ -173,7 +175,11 @@
       function renderTerminal(content) {
         terminal.innerHTML = content;
         setTimeout(() => {
-          terminalContainer.scrollTop = terminalContainer.scrollHeight;
+          // Improved scrolling with extra space at bottom
+          const lineHeight = parseInt(window.getComputedStyle(terminal).lineHeight);
+          const extraScrollSpace = lineHeight * 2; // 2 extra lines of space
+          terminalContainer.scrollTop =
+            terminalContainer.scrollHeight - terminalContainer.clientHeight + extraScrollSpace;
         }, 0);
       }
 
@@ -186,13 +192,11 @@
           }
           return;
         }
-
         const currentCommand = commandLines[commandIndex];
         if (currentCommand.prompt) {
           fullText += currentCommand.prompt;
           renderTerminal(fullText);
         }
-
         i = 0;
         typingCommand = true;
         typeCommandContent();
@@ -201,12 +205,10 @@
       function typeCommandContent() {
         if (!typing || !typingCommand) return;
         const currentCommand = commandLines[commandIndex];
-
         if (i < currentCommand.content.length) {
           fullText += currentCommand.content.charAt(i);
           renderTerminal(fullText);
           i++;
-
           setTimeout(typeCommandContent, commandIndex === 2 ? delay * 1.7 : delay);
         } else {
           fullText += '\n';
@@ -214,7 +216,6 @@
           i = 0;
           commandIndex++;
           typingCommand = false;
-
           if (commandIndex === commandLines.length) {
             runningInstall = true;
             setTimeout(startInstallationSequence, delay * 5);
@@ -230,18 +231,14 @@
           startInstallationSequence();
           return;
         }
-
         const lastNewline = fullText.lastIndexOf('\n');
-
         if (loadingBarIndex === 0) {
           fullText += '\n' + loadingBars[loadingBarIndex].text;
         } else {
           fullText = fullText.substring(0, lastNewline + 1) + loadingBars[loadingBarIndex].text;
         }
-
         renderTerminal(fullText);
         loadingBarIndex++;
-
         setTimeout(updateLoadingBar, loadingBars[loadingBarIndex - 1].delay);
       }
 
@@ -251,11 +248,9 @@
           setTimeout(startAdditionalCommands, delay * 10);
           return;
         }
-
         const current = installationSequence[installationIndex];
         fullText += '\n' + current.text;
         renderTerminal(fullText);
-
         if (current.bar) {
           loadingBarIndex = 0;
           setTimeout(updateLoadingBar, current.delay);
@@ -272,19 +267,15 @@
           }
           return;
         }
-
         const currentCommand = additionalCommands[additionalCommandIndex];
         if (currentCommand.prompt) {
           fullText += '\n' + currentCommand.prompt;
           renderTerminal(fullText);
         }
-
         i = 0;
         typingCommand = true;
-
         function typeAdditionalContent() {
           if (!typing || !typingCommand) return;
-
           if (i < currentCommand.content.length) {
             fullText += currentCommand.content.charAt(i);
             renderTerminal(fullText);
@@ -299,7 +290,6 @@
             setTimeout(startAdditionalCommands, delay * 15);
           }
         }
-
         typeAdditionalContent();
       }
 
@@ -312,12 +302,10 @@
           }
           return;
         }
-
         const currentLine = textResponse[textResponseIndex];
         fullText += '\n' + currentLine.text;
         renderTerminal(fullText);
         textResponseIndex++;
-
         setTimeout(typetextResponse, currentLine.delay * 30);
       }
 
@@ -326,13 +314,10 @@
         blogResponseIndex = 0;
         fullText += '\n' + blogCommand[0].prompt;
         renderTerminal(fullText);
-
         i = 0;
         typingCommand = true;
-
         function typeBlogContent() {
           if (!typing || !typingCommand) return;
-
           if (i < blogCommand[0].content.length) {
             fullText += blogCommand[0].content.charAt(i);
             renderTerminal(fullText);
@@ -346,26 +331,22 @@
             setTimeout(typeBlogResponse, delay * 15);
           }
         }
-
         typeBlogContent();
       }
 
       function typeBlogResponse() {
         if (!typing) return;
-
         if (blogResponseIndex >= blogResponse.length) {
           setTimeout(() => {
-            fullText += '\n\n<span class="white-text">>>></span> ';
+            fullText += '\n\n<span class="white-text">>>></span>';
             renderTerminal(fullText);
           }, delay * 15);
           return;
         }
-
         const currentLine = blogResponse[blogResponseIndex];
         fullText += '\n' + currentLine.text;
         renderTerminal(fullText);
         blogResponseIndex++;
-
         setTimeout(typeBlogResponse, currentLine.delay * 15);
       }
 
@@ -373,12 +354,10 @@
         if (!typing) return;
         typing = false;
         typingCommand = false;
-
         let finalText = '';
         commandLines.forEach((cmd) => {
           finalText += cmd.prompt + cmd.content + '\n';
         });
-
         finalText += '\n';
         installationSequence.forEach((step, index) => {
           if (index === 0) {
@@ -388,33 +367,30 @@
             finalText += step.text + '\n';
           }
         });
-
         additionalCommands.forEach((cmd) => {
           finalText += cmd.prompt + cmd.content + '\n';
           finalText += '\n';
         });
-
         textResponse.forEach((line) => {
           finalText += line.text + '\n';
         });
-
         finalText += '\n' + blogCommand[0].prompt + blogCommand[0].content + '\n';
         blogResponse.forEach((line) => {
           finalText += '\n' + line.text;
         });
-
         finalText += '\n\n';
-        finalText += '<span class="white-text">>>></span> ';
-
+        finalText += '<span class="white-text">>>></span>';
         renderTerminal(finalText);
       }
 
+      setTimeout(() => {
+        const lineHeight = parseInt(window.getComputedStyle(terminal).lineHeight);
+        const extraScrollSpace = lineHeight * 2;
+        terminalContainer.scrollTop = terminalContainer.scrollHeight + extraScrollSpace;
+      }, 200);
+
       document.addEventListener('click', skipToEnd);
       document.addEventListener('keydown', skipToEnd);
-
-      setTimeout(() => {
-        terminalContainer.scrollTop = terminalContainer.scrollHeight;
-      }, 100);
 
       startTypingCommands();
     </script>
