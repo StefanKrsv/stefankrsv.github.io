@@ -54,12 +54,14 @@
       const cursor = document.getElementById('cursor');
 
       const lines = [
-        `██████╗ ███████╗███████╗███╗   ███╗██╗███╗   ██╗
-  ██╔══██╗██╔════╝██╔════╝████╗ ████║██║████╗  ██║
-  ██║  ██║█████╗  █████╗  ██╔████╔██║██║██╔██╗ ██║
-  ██║  ██║██╔══╝  ██╔══╝  ██║╚██╔╝██║██║██║╚██╗██║
-  ██████╔╝███████╗███████╗██║ ╚═╝ ██║██║██║ ╚████║
-  ╚═════╝ ╚══════╝╚══════╝╚═╝     ╚═╝╚═╝╚═╝  ╚═══╝`,
+        `░▒▓████████▓▒░▒▓████████▓▒░░▒▓███████▓▒░▒▓████████▓▒░
+   ░▒▓█▓▒░   ░▒▓█▓▒░      ░▒▓█▓▒░         ░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓█▓▒░      ░▒▓█▓▒░         ░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓██████▓▒░  ░▒▓██████▓▒░   ░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓█▓▒░             ░▒▓█▓▒░  ░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓█▓▒░             ░▒▓█▓▒░  ░▒▓█▓▒░
+   ░▒▓█▓▒░   ░▒▓████████▓▒░▒▓███████▓▒░   ░▒▓█▓▒░     `,
+
         '',
         'Loading system...',
         '',
@@ -68,44 +70,58 @@
         'Visit → /blog',
       ];
 
-      let delay = 20; // faster speed
+      let delay = 15;
       let i = 0;
       let line = 0;
       let typing = true;
+
+      function renderTerminal(content) {
+        terminal.innerHTML = content;
+        terminal.parentNode.appendChild(cursor); // ensure cursor always follows
+      }
+
+      let fullText = '';
 
       function typeLine() {
         if (!typing) return;
 
         if (line >= lines.length) {
-          typing = false;
-          cursor.style.display = 'none';
-          terminal.innerHTML += `\nuser@site:~$ <a href="/blog">Click here to enter</a>\n`;
+          endSequence();
           return;
         }
 
         const currentLine = lines[line];
         if (i < currentLine.length) {
-          terminal.innerHTML += currentLine.charAt(i);
+          fullText += currentLine.charAt(i);
+          renderTerminal(fullText);
           i++;
           setTimeout(typeLine, delay);
         } else {
-          terminal.innerHTML += '\n';
+          fullText += '\n';
+          renderTerminal(fullText);
           i = 0;
           line++;
           setTimeout(typeLine, delay);
         }
       }
 
-      // Instant redirect on click or keypress
-      function skipIntro() {
-        if (typing) {
-          typing = false;
-          window.location.href = '/blog';
-        }
+      function skipToEnd() {
+        if (!typing) return;
+
+        typing = false;
+        fullText = lines.join('\n') + '\n\nuser@site:~$ ';
+        renderTerminal(fullText + `<a href="/blog">Click here to enter</a>\n`);
+        cursor.style.display = 'none';
       }
 
-      document.addEventListener('click', skipIntro);
-      document.addEventListener('keydown', skipIntro);
+      function endSequence() {
+        typing = false;
+        renderTerminal(fullText + `\nuser@site:~$ <a href="/blog">Click here to enter</a>\n`);
+        cursor.style.display = 'none';
+      }
+
+      document.addEventListener('click', skipToEnd);
+      document.addEventListener('keydown', skipToEnd);
 
       typeLine();
     </script>
