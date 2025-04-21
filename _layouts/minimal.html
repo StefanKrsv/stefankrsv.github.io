@@ -14,6 +14,7 @@
         font-family: 'Courier New', monospace;
         height: 100vh;
         overflow: hidden;
+        user-select: none;
       }
 
       #terminal {
@@ -23,8 +24,9 @@
         line-height: 1.5;
       }
 
-      .blink {
-        animation: blink 1s step-start infinite;
+      #cursor {
+        display: inline;
+        animation: blink 0.9s step-start infinite;
       }
 
       @keyframes blink {
@@ -45,9 +47,11 @@
   </head>
   <body>
     <div id="terminal"></div>
+    <span id="cursor">▊</span>
 
     <script>
       const terminal = document.getElementById('terminal');
+      const cursor = document.getElementById('cursor');
 
       const lines = [
         `██████╗ ███████╗███████╗███╗   ███╗██╗███╗   ██╗
@@ -64,12 +68,17 @@
         'Visit → /blog',
       ];
 
-      let delay = 25;
+      let delay = 20; // faster speed
       let i = 0;
       let line = 0;
+      let typing = true;
 
       function typeLine() {
+        if (!typing) return;
+
         if (line >= lines.length) {
+          typing = false;
+          cursor.style.display = 'none';
           terminal.innerHTML += `\nuser@site:~$ <a href="/blog">Click here to enter</a>\n`;
           return;
         }
@@ -86,6 +95,17 @@
           setTimeout(typeLine, delay);
         }
       }
+
+      // Instant redirect on click or keypress
+      function skipIntro() {
+        if (typing) {
+          typing = false;
+          window.location.href = '/blog';
+        }
+      }
+
+      document.addEventListener('click', skipIntro);
+      document.addEventListener('keydown', skipIntro);
 
       typeLine();
     </script>
