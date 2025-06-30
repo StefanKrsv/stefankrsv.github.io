@@ -1,6 +1,7 @@
 {
   "name": "My ESP8266 Firmware",
   "version": "1.0.0",
+  "token": true,
   "builds": [
     {
       "chipFamily": "ESP8266",
