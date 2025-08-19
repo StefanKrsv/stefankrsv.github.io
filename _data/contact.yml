@@ -8,6 +8,10 @@
   icon: "fa-brands fa-youtube"
   url: "https://www.youtube.com/@live_things"
 
+- type: discord
+  icon: "fab fa-discord"
+  url: "https://discord.com/users/792751366698827799"
+
 - type: email
   icon: "fas fa-envelope"
   noblank: true # open link in current tab
