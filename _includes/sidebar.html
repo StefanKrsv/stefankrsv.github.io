@@ -147,7 +147,7 @@
   .discord-activity {
     background: var(--dynamic-bg, rgba(30, 30, 30, 0.2));
     border-radius: 8px;
-    padding: 6px;
+    padding: 7.2px;
     margin-top: 8px;
     font-size: 0.75em;
     transition: background-color 0.4s ease;
@@ -158,18 +158,12 @@
   .spotify-activity,
   .game-activity {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    /*align-items: center;*/
     gap: 6px;
   }
 
   .spotify-album-mini,
-  .game-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
-
   .game-icon {
     width: 64px;
     height: 64px;
@@ -187,6 +181,7 @@
     color: #1db954;
     font-weight: bold;
     margin-bottom: 2px;
+
     font-size: 0.8em;
   }
 
@@ -198,12 +193,42 @@
   .game-name {
     color: var(--heading-color, #fff);
     font-weight: bold;
+    font-size: 0.65em;
+
+    line-height: 1.1;
+  }
+  .music-title {
+    color: var(--heading-color, #fff);
+    font-weight: bold;
+    font-size: 0.8em;
+
+    line-height: 1.2;
   }
 
+  .game-body {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .game-info {
-    color: var(--text-muted-color, #b9bbbe);
-    font-size: 0.75em;
+    font-size: 0.65em;
     line-height: 1.2;
+
+    vertical-align: middle;
+  }
+  .game-time {
+    font-size: 0.65em;
+    line-height: 1.2;
+    color: #22c55e;
+    font-family: Consolas, Menlo, Monaco, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+
+  .game-container {
+    display: flex;
+    align-items: baseline;
   }
 
   .discord-loading,
@@ -228,6 +253,10 @@
   (function () {
     const DISCORD_ID = '792751366698827799';
     const container = document.getElementById('discordStatusContainer');
+
+    // Time tracking variables
+    let activityStartTime = null;
+    let elapsedInterval = null;
 
     // Dynamic background color functions
     function getAverageColor(img, callback) {
@@ -273,8 +302,8 @@
       }
     }
 
-    function createDynamicBackground(color, opacity = 0.25, darken = 0.7) {
-      if (!color) return 'rgba(0, 0, 0, 0.2)';
+    function createDynamicBackground(color, opacity = 0.4, darken = 0.8) {
+      if (!color) return 'rgba(30, 30, 30, 0.2)';
 
       const darkR = Math.floor(color.r * darken);
       const darkG = Math.floor(color.g * darken);
@@ -297,10 +326,56 @@
       };
 
       img.onerror = () => {
-        activityElement.style.setProperty('--dynamic-bg', 'rgba(0, 0, 0, 0.2)');
+        activityElement.style.setProperty('--dynamic-bg', 'rgba(30, 30, 30, 0.2)');
       };
 
       img.src = imageUrl;
+    }
+
+    function formatTimeElapsed(milliseconds) {
+      const totalSeconds = Math.floor(milliseconds / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      } else {
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }
+
+    function updateElapsedTime() {
+      if (activityStartTime) {
+        const elapsed = Date.now() - activityStartTime;
+        const timeElement = document.getElementById('activityElapsedTime');
+        if (timeElement) {
+          timeElement.textContent = formatTimeElapsed(elapsed);
+        }
+      }
+    }
+
+    function startElapsedTimer(startTime) {
+      activityStartTime = startTime;
+
+      // Clear existing interval
+      if (elapsedInterval) {
+        clearInterval(elapsedInterval);
+      }
+
+      // Update immediately
+      updateElapsedTime();
+
+      // Update every second
+      elapsedInterval = setInterval(updateElapsedTime, 1000);
+    }
+
+    function stopElapsedTimer() {
+      if (elapsedInterval) {
+        clearInterval(elapsedInterval);
+        elapsedInterval = null;
+      }
+      activityStartTime = null;
     }
 
     async function fetchDiscordStatus() {
@@ -333,6 +408,7 @@
 
       let activityHtml = '';
       let imageUrl = null;
+      let hasActivityWithTime = false;
 
       if (data.listening_to_spotify && data.spotify) {
         imageUrl = data.spotify.album_art_url;
@@ -346,10 +422,35 @@
               </div>
             </div>
           </div>`;
+      }
+
+      if (data.activities[0]?.type == 2) {
+        const activity = data.activities[0];
+        imageUrl = `https://media.discordapp.net/${activity.assets.large_image.slice(3)}`;
+        gameIconHtml = `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySARWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo='">`;
+        activityHtml = `
+            <div class="discord-activity" id="discordActivity">
+              <div class="game-activity">
+              <div class="game-name">Listening to ${truncateText(activity.name, 20)}</div>
+              <div class="game-body">
+                ${gameIconHtml}
+                <div class="game-details">
+                  ${activity.details ? `<div class="music-title">${truncateText(activity.details, 25)}</div>` : ''}
+                  ${activity.state ? `<div class="game-info">${truncateText(activity.state, 25)}</div>` : ''}
+                  ${
+                    activity.state
+                      ? `<div class="game-info">${truncateText(activity.assets?.large_text || '', 25)}</div>`
+                      : ''
+                  }
+                  </div>
+                </div>
+              </div>
+            </div>`;
       } else if (data.activities && data.activities.length > 0) {
         const activity = data.activities[0];
         if (activity.name !== 'Spotify') {
           let gameIconHtml = '';
+          hasActivityWithTime = true;
 
           if (
             activity.application_id &&
@@ -358,7 +459,7 @@
             activity.application_id != activity.assets?.large_image
           ) {
             imageUrl = `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png?size=64`;
-            gameIconHtml = `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyVjdIMTlWNUgxN1Y3SDE1VjlIMTdWMTFIMTlWMTJIMjFaTTEwIDEySDhWMTBINlYxMkg0VjE0SDZWMTJIOFYXNEGMTEW5WjEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ii8+Cjwvc3ZnPgo='">`;
+            gameIconHtml = `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyVjdIMTlWNUgxN1Y3SDE1VjlIMTdWMTFIMTlWMTJIMjFaTTEwIDEySDhWMTBINlYxMkg0VjE0SDZWMTJIOFYXNEGMTEW5WjEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo='">`;
           } else if (
             activity.application_id &&
             activity.assets?.large_image &&
@@ -366,33 +467,50 @@
             activity.application_id != activity.assets?.large_image
           ) {
             imageUrl = `https://cdn.discordapp.com/app-icons/${activity.application_id}/${activity.application_id}.png?size=64`;
-            gameIconHtml = `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyVjdIMTlWNUgxN1Y3SDE1VjlIMTdWMTFIMTlWMTJIMjFaTTEwIDEySDhWMTBINlYxMkg0VjE0SDZWMTJIOFYXNEGMTEW5WjEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMUAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo='">`;
-          } else if (
-            activity.application_id &&
-            activity.assets?.large_image &&
-            activity.name == 'YouTube Music' &&
-            activity.application_id != activity.assets?.large_image
-          ) {
-            imageUrl = `https://media.discordapp.net/${activity.assets.large_image.slice(3)}`;
-            gameIconHtml = `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySARWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ii8+Cjwvc3ZnPgo='">`;
+            gameIconHtml = `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyVjdIMTlWNUgxN1Y3SDE1VjlIMTdWMTFIMTlWMTJIMjFaTTEwIDEySDhWMTBINlYxMkg0VjE0SDZWMTJIOFYXNEGMTEW5WjEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMUAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo='">`;
           } else {
             gameIconHtml = `<div class="game-icon"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="2 2 20 20" fill="none">
  <path fill="currentColor" fill-rule="evenodd" d="M5 2a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V5a3 3 0 0 0-3-3H5Zm6.81 7c-.54 0-1 .26-1.23.61A1 1 0 0 1 8.92 8.5 3.49 3.49 0 0 1 11.82 7c1.81 0 3.43 1.38 3.43 3.25 0 1.45-.98 2.61-2.27 3.06a1 1 0 0 1-1.96.37l-.19-1a1 1 0 0 1 .98-1.18c.87 0 1.44-.63 1.44-1.25S12.68 9 11.81 9ZM13 16a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm7-10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM18.5 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM7 18.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM5.5 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" clip-rule="evenodd"/>
 </svg></div>`;
           }
 
+          if (activity.created_at) {
+            startElapsedTimer(activity.created_at);
+          }
+
           activityHtml = `
             <div class="discord-activity" id="discordActivity">
               <div class="game-activity">
+              <div class="game-name">Playing</div>
+                <div class="game-body">
                 ${gameIconHtml}
                 <div class="game-details">
-                  <div class="game-name">${truncateText(activity.name, 20)}</div>
+                  <div class="music-title">${truncateText(activity.name, 20)}</div>
                   ${activity.details ? `<div class="game-info">${truncateText(activity.details, 25)}</div>` : ''}
-                  ${activity.state ? `<div class="game-info">${truncateText(activity.state, 25)}</div>` : ''}
+                  <div class="game-container">
+                  <div class="game-info"><svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="none" viewBox="0 0 26 27.5">
+  <path fill="#22c55e" fill-rule="evenodd" d="M20.97 4.06c0 .18.08.35.24.43.55.28.9.82 1.04 1.42.3 1.24.75 3.7.75 7.09v4.91a3.09 3.09 0 0 1-5.85 1.38l-1.76-3.51a1.09 1.09 0 0 0-1.23-.55c-.57.13-1.36.27-2.16.27s-1.6-.14-2.16-.27c-.49-.11-1 .1-1.23.55l-1.76 3.51A3.09 3.09 0 0 1 1 17.91V13c0-3.38.46-5.85.75-7.1.15-.6.49-1.13 1.04-1.4a.47.47 0 0 0 .24-.44c0-.7.48-1.32 1.2-1.47l2.93-.62c.5-.1 1 .06 1.36.4.35.34.78.71 1.28.68a42.4 42.4 0 0 1 4.4 0c.5.03.93-.34 1.28-.69.35-.33.86-.5 1.36-.39l2.94.62c.7.15 1.19.78 1.19 1.47ZM20 7.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM15.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM5 7a1 1 0 0 1 2 0v1h1a1 1 0 0 1 0 2H7v1a1 1 0 1 1-2 0v-1H4a1 1 0 1 1 0-2h1V7Z" clip-rule="evenodd" />
+</svg></div>
+ <div class="game-time" id="activityElapsedTime">0:00</div>
+                   ${
+                     activity.state && activity.party?.size
+                       ? `<div class="game-info">&nbsp;${truncateText(activity.state, 25)} (${
+                           activity.party.size[0]
+                         })</div>`
+                       : activity.state
+                       ? `<div class="game-info">${truncateText(activity.state, 25)}</div>`
+                       : ''
+                   }
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>`;
         }
+      }
+
+      if (!hasActivityWithTime) {
+        stopElapsedTimer();
       }
 
       const avatarUrl = `https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.png?size=256`;
@@ -406,7 +524,6 @@
         <div class="discord-status-text">${statusTexts[data.discord_status] || 'Unknown'}</div>
         ${activityHtml}`;
 
-      // Apply dynamic background after DOM update
       if (imageUrl && activityHtml) {
         setTimeout(() => {
           const activityElement = document.getElementById('discordActivity');
@@ -418,7 +535,7 @@
     }
 
     function truncateText(text, maxLength) {
-      return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+      return text && text.length > maxLength ? text.substring(0, maxLength) + '...' : text || '';
     }
 
     function showError(message) {
