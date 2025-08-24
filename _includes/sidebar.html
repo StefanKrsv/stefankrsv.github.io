@@ -2,7 +2,7 @@
 <aside aria-label="Sidebar" id="sidebar" class="d-flex flex-column align-items-end">
   <header class="profile-wrapper">
     <!-- Discord Status Widget -->
-    <div class="discord-status-container" id="discordStatusContainer">
+    <div class="discord-status-container" id="discordStatusContainer" data-turbo-permanent>
       <div class="discord-loading">Loading...</div>
     </div>
 
@@ -539,7 +539,7 @@
           ws.onopen = () => {
             debugLog('WebSocket connected successfully!');
             reconnectAttempts = 0;
-            container.querySelector('.discord-loading')?.remove();
+            container?.querySelector('.discord-loading')?.remove();
           };
 
           ws.onmessage = (event) => {
