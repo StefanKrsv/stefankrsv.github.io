@@ -33,7 +33,6 @@ github:
 plugins:
   - jekyll-relative-links
   - jekyll-sitemap
-  - jekyll-feed
 social:
   # Change to your full name.
   # It will be displayed as the default author of the posts and the copyright owner in the Footer
