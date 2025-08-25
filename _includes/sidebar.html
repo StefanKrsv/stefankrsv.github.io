@@ -108,6 +108,8 @@
   .discord-avatar-wrapper {
     position: relative;
     display: inline-block;
+    min-width: max-content;
+    flex-shrink: 0;
   }
   .discord-avatar {
     width: 112px;
@@ -145,11 +147,12 @@
   }
 
   .status-offline {
-    background-color: #82838b;
+    background-color: #1e1e2e;
+    box-shadow: inset 0 0 0 5px #82838b;
   }
 
   .discord-username {
-    color: var(--heading-color, #fff);
+    color: var(--heading-color, #cccccc);
     font-weight: 800;
     font-size: 1.2em;
     text-decoration: none;
@@ -221,7 +224,7 @@
   }
 
   .game-name {
-    color: #fff;
+    color: #cccccc;
     font-weight: 500;
     font-size: 11px;
     line-height: 1.1;
@@ -230,16 +233,16 @@
     text-overflow: ellipsis;
   }
   .music-title {
-    color: #fff;
+    color: #cccccc;
     font-weight: bold;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.2;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
   }
   .music-time {
-    color: #fff;
+    color: #cccccc;
     font-size: 11px;
     line-height: 1.3;
     vertical-align: middle;
@@ -255,7 +258,7 @@
     height: 2px;
   }
   .progress {
-    background-color: #fff;
+    background-color: #cccccc;
     border-radius: inherit;
     height: inherit;
     min-width: 4px;
@@ -266,7 +269,7 @@
     gap: 8px;
   }
   .game-info {
-    color: #fff;
+    color: #cccccc;
     font-size: 11px;
     line-height: 1.33;
     vertical-align: middle;
@@ -294,12 +297,12 @@
       Monaco, 'Courier New', Courier, monospace;
     font-variant-numeric: tabular-nums;
     font-weight: 900;
+    -webkit-text-stroke: 0.6px #579a5b;
   }
-
   .game-container {
     display: flex;
     align-items: center;
-    gap: 1.5px;
+    gap: 2.4px;
     margin-top: 5px;
   }
   .music-container {
