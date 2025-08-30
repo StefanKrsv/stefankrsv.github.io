@@ -12,6 +12,7 @@ import {
 loadImg();
 initToc();
 imgPopup();
+console.log('hie');
 initSidebar();
 initLocaleDatetime();
 initClipboard();
