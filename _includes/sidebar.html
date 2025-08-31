@@ -169,7 +169,7 @@
     justify-content: center;
   }
   .discord-activity {
-    background: var(--dynamic-bg);
+    background: color-mix(in srgb, var(--dynamic-bg) 95%, #cccccc 5%);
     border-radius: 8px;
     padding: 0.7em;
     margin-top: 2.5em;
@@ -177,6 +177,8 @@
     transition: background-color 0.4s ease;
     position: relative;
     overflow: hidden;
+    color: #cccccc;
+    border: 1px solid color-mix(in srgb, var(--dynamic-bg) 85%, #cccccc 15%);
   }
 
   .spotify-activity,
@@ -195,7 +197,6 @@
     object-fit: cover;
   }
 
-  .spotify-details,
   .game-details {
     flex: 1;
     text-align: left;
@@ -271,7 +272,7 @@
   .game-info {
     color: #cccccc;
     font-size: 11px;
-    line-height: 1.33;
+    line-height: 1.1;
     vertical-align: middle;
     font-weight: 500;
     overflow: hidden;
@@ -312,7 +313,6 @@
     margin-top: 5px;
   }
 
-  .discord-loading,
   .discord-error {
     color: var(--text-muted-color, #82838b);
     font-size: 0.8em;
@@ -325,8 +325,11 @@
   .spotify-link {
     text-decoration: none;
     color: inherit;
-    display: inline-block;
+    display: block;
     transition: opacity 0.2s ease;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .spotify-link:hover {
@@ -338,7 +341,7 @@
   }
 
   .spotify-album-mini:hover {
-    transform: scale(1.05);
+    transform: scale(1.01);
     transition: transform 0.2s ease;
   }
 
@@ -365,31 +368,12 @@
     let ws = null;
     let heartbeatInterval = null;
     let lastActivityContent = null;
+    let lastType = null;
     let lastImageUrl = null;
     let lastBackgroundColor = null;
-    let domElements = {
-      container: null,
-      statusBadge: null,
-      statusText: null,
-      username: null,
-      avatar: null,
-      activityContainer: null,
-      elapsedTime: null,
-      progress: null
-    };
 
     function debugLog(message, data = null) {
-      /*console.log(`[Discord Widget] ${message}`, data || '');*/
-    }
-    function cacheDOMElements() {
-      domElements.container = container;
-      domElements.statusBadge = container.querySelector('.discord-status-badge');
-      domElements.statusText = container.querySelector('.discord-status-text');
-      domElements.username = container.querySelector('.discord-username');
-      domElements.avatar = container.querySelector('.discord-avatar');
-      domElements.activityContainer = container.querySelector('.discord-activity');
-      domElements.elapsedTime = document.getElementById('activityElapsedTime');
-      domElements.progress = document.getElementById('activityProgress');
+      console.log(`[Discord Widget] ${message}`, data || '');
     }
     function getAverageColor(img, callback) {
       const canvas = document.createElement('canvas');
@@ -435,22 +419,42 @@
     }
 
     function getActivityContentHash(data) {
+      let hash = {};
+
       if (data.listening_to_spotify && data.spotify) {
-        return `spotify:${data.spotify.song}:${data.spotify.artist}:${data.spotify.track_id}`;
+        hash = {
+          type: 'spotify',
+          song: data.spotify.song,
+          artist: data.spotify.artist,
+          track_id: data.spotify.track_id
+        };
       } else if (data.activities?.[0]?.type == 2) {
         const activity = data.activities[0];
-        return `listening:${activity.name}:${activity.details}:${activity.state}:${activity.assets?.large_text}`;
+        hash = {
+          type: 'listening',
+          name: activity.name,
+          details: activity.details,
+          state: activity.state,
+          large_text: activity.assets?.large_text
+        };
       } else if (data.activities?.length > 0) {
         const activity = data.activities[0];
         if (activity.name !== 'Spotify') {
-          return `gaming:${activity.name}:${activity.details}:${activity.state}:${activity.party?.size?.[0] || ''}`;
+          hash = {
+            type: 'gaming',
+            name: activity.name,
+            details: activity.details,
+            state: activity.state,
+            party_size: activity.party?.size?.[0] || ''
+          };
         }
       }
-      return 'none';
+
+      return hash;
     }
 
     function createDynamicBackground(color, opacity = 0.4, darken = 0.7) {
-      if (!color) return '#82838b';
+      if (!color) return '#82838b3f';
 
       const darkR = Math.floor(color.r * darken);
       const darkG = Math.floor(color.g * darken);
@@ -459,7 +463,7 @@
       return `rgba(${darkR}, ${darkG}, ${darkB}, ${opacity})`;
     }
 
-    function applyDynamicBackground(imageUrl, activityElement) {
+    function applyDynamicBackground(imageUrl, activityElement, onColor) {
       if (!imageUrl || !activityElement) return;
 
       const img = new Image();
@@ -469,14 +473,15 @@
         getAverageColor(img, (color) => {
           const bgColor = createDynamicBackground(color);
           activityElement.style.setProperty('--dynamic-bg', bgColor);
+          onColor && onColor(bgColor);
         });
       };
 
       img.onerror = () => {
-        activityElement.style.setProperty('--dynamic-bg', '#82838b');
+        activityElement.style.setProperty('--dynamic-bg', '#82838b3f');
       };
 
-      img.src = imageUrl;
+      img.src = imageUrl + (imageUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
     }
 
     function formatTimeElapsed(milliseconds) {
@@ -649,6 +654,7 @@
         heartbeatInterval = setInterval(() => {
           if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ op: 3 }));
+            console.log('heartbeat');
           }
         }, interval);
       }
@@ -685,7 +691,7 @@
 
       if (!avatar || !statusBadge || !username || !statusText || !avatarWrapper) return;
 
-      const avatarUrl = `https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.png?size=256`;
+      const avatarUrl = `https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.jpg?size=256`;
       if (avatar.src !== avatarUrl) {
         avatar.src = avatarUrl;
       }
@@ -713,23 +719,24 @@
       const activityContainer = container.querySelector('.discord-activity-container');
       if (!activityContainer) return;
 
-      let newActivityHtml = '';
       let imageUrl = null;
       let hasActivityWithTime = false;
 
       const currentContentHash = getActivityContentHash(data);
+      const currentType = currentContentHash.type;
+      console.error('Current type:', currentType);
 
       if (data.listening_to_spotify && data.spotify) {
         imageUrl = data.spotify.album_art_url;
         hasActivityWithTime = true;
         startElapsedTimer(data.spotify.timestamps?.start, data.spotify.timestamps?.end);
-        newActivityHtml = generateSpotifyActivity(data.spotify);
+        activityContainer.innerHTML = generateSpotifyActivity(data.spotify);
       } else if (data.activities?.[0]?.type == 2) {
         hasActivityWithTime = true;
         const activity = data.activities[0];
         imageUrl = `https://media.discordapp.net/${activity.assets.large_image.slice(3)}`;
         startElapsedTimer(activity.timestamps?.start, activity.timestamps?.end);
-        newActivityHtml = generateListeningActivity(activity, imageUrl);
+        activityContainer.innerHTML = generateListeningActivity(activity, imageUrl);
       } else if (data.activities?.length > 0) {
         const activity = data.activities[0];
         if (activity.name !== 'Spotify') {
@@ -738,15 +745,14 @@
           if (activity.created_at) {
             startElapsedTimer(activity.timestamps?.start || activity.created_at);
           }
-          newActivityHtml = generateGameActivity(activity, imageUrl);
+          activityContainer.innerHTML = generateGameActivity(activity, imageUrl);
         }
       }
-
+      const typeChanged = currentType !== lastType;
       const contentChanged = currentContentHash !== lastActivityContent;
       const imageChanged = imageUrl !== lastImageUrl;
 
       if (contentChanged) {
-        activityContainer.innerHTML = newActivityHtml;
         lastActivityContent = currentContentHash;
 
         if (imageUrl) {
@@ -754,12 +760,14 @@
             const activityElement = activityContainer.querySelector('.discord-activity');
             if (activityElement) {
               if (imageChanged) {
+                lastImageUrl = imageUrl;
                 applyDynamicBackground(imageUrl, activityElement, (bgColor) => {
-                  lastImageUrl = imageUrl;
                   lastBackgroundColor = bgColor;
+                  console.error('new', lastBackgroundColor);
                 });
               } else {
                 activityElement.style.setProperty('--dynamic-bg', lastBackgroundColor || '#82838b3f');
+                console.error('last', lastBackgroundColor);
               }
             }
           }, 10);
@@ -768,6 +776,7 @@
             const activityElement = activityContainer.querySelector('.discord-activity');
             if (activityElement) {
               const defaultBg = '#82838b3f';
+              console.error('defaulted');
               activityElement.style.setProperty('--dynamic-bg', defaultBg);
               lastImageUrl = null;
               lastBackgroundColor = defaultBg;
@@ -777,9 +786,10 @@
       } else if (imageChanged && imageUrl) {
         const activityElement = activityContainer.querySelector('.discord-activity');
         if (activityElement) {
+          lastImageUrl = imageUrl;
           applyDynamicBackground(imageUrl, activityElement, (bgColor) => {
-            lastImageUrl = imageUrl;
             lastBackgroundColor = bgColor;
+            console.error('image&&imageurl');
           });
         }
       }
@@ -789,143 +799,138 @@
     }
 
     function generateSpotifyActivity(spotify) {
+      const totalDuration = spotify.timestamps.end - spotify.timestamps.start;
+      const elapsedTime = Date.now() - spotify.timestamps.start;
+      const progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+      const trackUrl = `https://open.spotify.com/track/${spotify.track_id || '#'}`;
+
+      const createSpotifyLink = (content) =>
+        `<a href="${trackUrl}" target="_blank" rel="noopener noreferrer" class="spotify-link">${content}</a>`;
+
+      const timeContainer = spotify.timestamps
+        ? `
+    <div class="music-container">
+      <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(elapsedTime)}</div>
+      <div class="bar"><div class="progress" id="activityProgress" style="width: ${progressPercentage}%;"></div></div>
+      <div class="music-time">${formatTimeElapsed(spotify.timestamps.end - spotify.timestamps.start)}</div>
+    </div>`
+        : '';
+
       return `<div class="discord-activity" id="discordActivity">
-        <div class="game-activity">
-          <div class="game-name">Listening to Spotify</div>
-          <div class="game-body">
-            <a href="https://open.spotify.com/track/${
-              spotify.track_id || '#'
-            }" target="_blank" rel="noopener noreferrer" class="spotify-link">
-              <img src="${spotify.album_art_url}" alt="Album" class="spotify-album-mini">
-            </a>
-            <div class="game-details">
-              <a href="https://open.spotify.com/track/${
-                spotify.track_id || '#'
-              }" target="_blank" rel="noopener noreferrer" class="spotify-link">
-                <div class="spotify-song">♪ ${spotify.song}</div>
-              </a>
-              <div class="spotify-artist">by ${spotify.artist}</div>
-              ${
-                spotify.timestamps
-                  ? `
-                <div class="music-container">
-                  <div class="music-time" id="activityElapsedTime">0:00</div>
-                  <div class="bar"><div class="progress" id="activityProgress" style="width: 0%;"></div></div>
-                  <div class="music-time">${formatTimeElapsed(
-                    spotify.timestamps?.end - spotify.timestamps?.start
-                  )}</div>
-                </div>`
-                  : ''
-              }
-            </div>
-          </div>
+    <div class="game-activity">
+      <div class="game-name">Listening to Spotify</div>
+      <div class="game-body">
+        ${createSpotifyLink(`<img src="${spotify.album_art_url}" alt="Album" class="spotify-album-mini">`)}
+        <div class="game-details">
+          ${createSpotifyLink(`<div class="spotify-song">♪ ${spotify.song}</div>`)}
+          <div class="spotify-artist">by ${spotify.artist}</div>
+          ${timeContainer}
         </div>
-      </div>`;
+      </div>
+    </div>
+  </div>`;
     }
 
     function generateListeningActivity(activity, imageUrl) {
-      const gameIconHtml = `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySERWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo='">`;
+      const totalDuration = activity.timestamps.end - activity.timestamps.start;
+      const elapsedTime = Date.now() - activity.timestamps.start;
+      const progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+      const fallbackIcon =
+        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySERWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo=';
+      const isYouTubeMusic = activity.name === 'YouTube Music';
+      const searchQuery = isYouTubeMusic
+        ? encodeURIComponent(`${activity.details || ''} ${activity.state || ''}`.trim())
+        : '';
+
+      const createLink = (content, query = searchQuery) =>
+        isYouTubeMusic && query
+          ? `<a href="https://music.youtube.com/search?q=${query}" target="_blank" rel="noopener noreferrer" class="spotify-link">${content}</a>`
+          : content;
+
+      const albumImage = activity.details
+        ? isYouTubeMusic
+          ? createLink(
+              `<img src="${imageUrl}" alt="Album" class="spotify-album-mini" onerror="this.src='${fallbackIcon}'">`
+            )
+          : `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='${fallbackIcon}'">`
+        : '';
+
+      const title = activity.details ? createLink(`<div class="music-title">${activity.details}</div>`) : '';
+      const artist = activity.state
+        ? createLink(
+            `<div class="game-info">${activity.state}</div>`,
+            isYouTubeMusic ? encodeURIComponent(activity.state) : ''
+          )
+        : '';
+      const album = activity.assets?.large_text ? `<div class="game-info">${activity.assets.large_text}</div>` : '';
+
+      const timeContainer = activity.timestamps
+        ? `
+    <div class="music-container">
+      <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(
+        Date.now() - activity.timestamps.start
+      )}</div>
+      <div class="bar"><div class="progress" id="activityProgress" style="width: ${progressPercentage}%;"></div></div>
+      <div class="music-time">${formatTimeElapsed(activity.timestamps.end - activity.timestamps.start)}</div>
+    </div>`
+        : '';
 
       return `<div class="discord-activity" id="discordActivity">
-        <div class="game-activity">
-          <div class="game-name">Listening to ${activity.name}</div>
-          <div class="game-body">
-            ${
-              activity.details
-                ? `
-    ${
-      activity.name == 'YouTube Music'
-        ? `<a href="https://music.youtube.com/search?q=${
-            activity.details + ' ' + activity.state || '#'
-          }" target="_blank" rel="noopener noreferrer" class="spotify-link">
-        <img src="${imageUrl}" alt="Album" class="spotify-album-mini" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySERWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo='">
-      </a>`
-        : gameIconHtml
-    }`
-                : ''
-            }
-            <div class="game-details">
-
-              ${
-                activity.details
-                  ? `
-  <div class="music-title">
-    ${
-      activity.name == 'YouTube Music'
-        ? `<a href="https://music.youtube.com/search?q=${
-            activity.details + ' ' + activity.state || '#'
-          }" target="_blank" rel="noopener noreferrer" class="spotify-link">
-        <div class="music-title">${activity.details}</div>
-      </a>`
-        : activity.details
-    }
-  </div>`
-                  : ''
-              }
-              ${
-                activity.state
-                  ? `
-  <div class="game-info">
-    ${
-      activity.name == 'YouTube Music'
-        ? `<a href="https://music.youtube.com/search?q=${
-            activity.state || '#'
-          }" target="_blank" rel="noopener noreferrer" class="spotify-link">
-        <div class="game-info">${activity.state}</div>
-      </a>`
-        : activity.state
-    }
-  </div>`
-                  : ''
-              }
-              ${activity.assets.large_text ? `<div class="game-info">${activity.assets.large_text || ''}</div>` : ''}
-              ${
-                activity.timestamps
-                  ? `
-                <div class="music-container">
-                  <div class="music-time" id="activityElapsedTime">0:00</div>
-                  <div class="bar"><div class="progress" id="activityProgress" style="width: 0%;"></div></div>
-                  <div class="music-time">${formatTimeElapsed(
-                    activity.timestamps?.end - activity.timestamps?.start
-                  )}</div>
-                </div>`
-                  : ''
-              }
-            </div>
-          </div>
+    <div class="game-activity">
+      <div class="game-name">Listening to ${activity.name}</div>
+      <div class="game-body">
+        <div class="game-body">${albumImage}</div>
+        <div class="game-details">
+          <div class="music-title">${title}</div>
+          <div class="game-info">${artist}</div>
+          ${album}
+          ${timeContainer}
         </div>
-      </div>`;
+      </div>
+    </div>
+  </div>`;
     }
 
     function generateGameActivity(activity, imageUrl) {
       const gameIconHtml = getGameIconHtml(activity, imageUrl);
 
+      const gamepadIcon = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24">
+    <path fill="#579a5b" fill-rule="evenodd" d="M20.97 4.06c0 .18.08.35.24.43.55.28.9.82 1.04 1.42.3 1.24.75 3.7.75 7.09v4.91a3.09 3.09 0 0 1-5.85 1.38l-1.76-3.51a1.09 1.09 0 0 0-1.23-.55c-.57.13-1.36.27-2.16.27s-1.6-.14-2.16-.27c-.49-.11-1 .1-1.23.55l-1.76 3.51A3.09 3.09 0 0 1 1 17.91V13c0-3.38.46-5.85.75-7.1.15-.6.49-1.13 1.04-1.4a.47.47 0 0 0 .24-.44c0-.7.48-1.32 1.2-1.47l2.93-.62c.5-.1 1 .06 1.36.4.35.34.78.71 1.28.68a42.4 42.4 0 0 1 4.4 0c.5.03.93-.34 1.28-.69.35-.33.86-.5 1.36-.39l2.94.62c.7.15 1.19.78 1.19 1.47ZM20 7.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM15.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM5 7a1 1 0 0 1 2 0v1h1a1 1 0 0 1 0 2H7v1a1 1 0 1 1-2 0v-1H4a1 1 0 1 1 0-2h1V7Z" clip-rule="evenodd" />
+  </svg>`;
+
+      const userIcon = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24">
+    <path fill="#82838b" d="M14.5 8a3 3 0 1 0-2.7-4.3c-.2.4.06.86.44 1.12a5 5 0 0 1 2.14 3.08c.01.06.06.1.12.1ZM18.44 17.27c.15.43.54.73 1 .73h1.06c.83 0 1.5-.67 1.5-1.5a7.5 7.5 0 0 0-6.5-7.43c-.55-.08-.99.38-1.1.92-.06.3-.15.6-.26.87-.23.58-.05 1.3.47 1.63a9.53 9.53 0 0 1 3.83 4.78ZM12.5 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2 20.5a7.5 7.5 0 0 1 15 0c0 .83-.67 1.5-1.5 1.5a.2.2 0 0 1-.2-.16c-.2-.96-.56-1.87-.88-2.54-.1-.23-.42-.15-.42.1v2.1a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2.1c0-.25-.31-.33-.42-.1-.32.67-.67 1.58-.88 2.54a.2.2 0 0 1-.2.16A1.5 1.5 0 0 1 2 20.5Z" />
+  </svg>`;
+
+      const getStateContent = () => {
+        if (!activity.state) return '';
+
+        if (activity.party?.size) {
+          return `${userIcon}<div class="game-state">${activity.state} (${activity.party.size[0]})</div>`;
+        }
+        return `<div class="game-state">&nbsp;${activity.state}</div>`;
+      };
+
       return `<div class="discord-activity" id="discordActivity">
-        <div class="game-activity">
-          <div class="game-name">Playing</div>
-          <div class="game-body">
-            ${gameIconHtml}
-            <div class="game-details">
-              <div class="music-title">${activity.name}</div>
-              ${activity.details ? `<div class="game-info">${activity.details}</div>` : ''}
-              <div class="game-container">
-                <svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24">
-                  <path fill="#579a5b" fill-rule="evenodd" d="M20.97 4.06c0 .18.08.35.24.43.55.28.9.82 1.04 1.42.3 1.24.75 3.7.75 7.09v4.91a3.09 3.09 0 0 1-5.85 1.38l-1.76-3.51a1.09 1.09 0 0 0-1.23-.55c-.57.13-1.36.27-2.16.27s-1.6-.14-2.16-.27c-.49-.11-1 .1-1.23.55l-1.76 3.51A3.09 3.09 0 0 1 1 17.91V13c0-3.38.46-5.85.75-7.1.15-.6.49-1.13 1.04-1.4a.47.47 0 0 0 .24-.44c0-.7.48-1.32 1.2-1.47l2.93-.62c.5-.1 1 .06 1.36.4.35.34.78.71 1.28.68a42.4 42.4 0 0 1 4.4 0c.5.03.93-.34 1.28-.69.35-.33.86-.5 1.36-.39l2.94.62c.7.15 1.19.78 1.19 1.47ZM20 7.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM15.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM5 7a1 1 0 0 1 2 0v1h1a1 1 0 0 1 0 2H7v1a1 1 0 1 1-2 0v-1H4a1 1 0 1 1 0-2h1V7Z" clip-rule="evenodd" />
-                </svg>
-                <div class="game-time" id="activityElapsedTime">0:00</div>
-                ${
-                  activity.state && activity.party?.size
-                    ? `&nbsp;<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24"><path fill="#82838b" d="M14.5 8a3 3 0 1 0-2.7-4.3c-.2.4.06.86.44 1.12a5 5 0 0 1 2.14 3.08c.01.06.06.1.12.1ZM18.44 17.27c.15.43.54.73 1 .73h1.06c.83 0 1.5-.67 1.5-1.5a7.5 7.5 0 0 0-6.5-7.43c-.55-.08-.99.38-1.1.92-.06.3-.15.6-.26.87-.23.58-.05 1.3.47 1.63a9.53 9.53 0 0 1 3.83 4.78ZM12.5 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2 20.5a7.5 7.5 0 0 1 15 0c0 .83-.67 1.5-1.5 1.5a.2.2 0 0 1-.2-.16c-.2-.96-.56-1.87-.88-2.54-.1-.23-.42-.15-.42.1v2.1a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2.1c0-.25-.31-.33-.42-.1-.32.67-.67 1.58-.88 2.54a.2.2 0 0 1-.2.16A1.5 1.5 0 0 1 2 20.5Z" class=""></path></svg>
-                  <div class="game-state">${activity.state} (${activity.party.size[0]})</div>`
-                    : activity.state
-                    ? `<div class="game-state">&nbsp;${activity.state}</div>`
-                    : ''
-                }
-              </div>
-            </div>
+    <div class="game-activity">
+      <div class="game-name">Playing</div>
+      <div class="game-body">
+        ${gameIconHtml}
+        <div class="game-details">
+          <div class="music-title">${activity.name}</div>
+          ${activity.details ? `<div class="game-info">${activity.details}</div>` : ''}
+          <div class="game-info" id="listeningAlbum">${activity.assets?.large_text || ''}</div>
+          <div class="game-container">
+            ${gamepadIcon}
+            <div class="game-time" id="activityElapsedTime">${formatTimeElapsed(
+              Date.now() - activity.timestamps.start
+            )}</div>
+            ${getStateContent()}
           </div>
         </div>
-      </div>`;
+      </div>
+    </div>
+  </div>`;
     }
 
     function getActivityImageUrl(activity) {
@@ -934,13 +939,14 @@
         activity.assets?.large_image &&
         activity.application_id != activity.assets?.large_image
       ) {
-        return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png?size=64`;
+        return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.jpg?size=64`;
       } else if (
         activity.application_id &&
         activity.assets?.large_image &&
         activity.application_id != activity.assets?.large_image
+        /* placeholder i guess */
       ) {
-        return `https://cdn.discordapp.com/app-icons/${activity.application_id}/${activity.application_id}.png?size=64`;
+        return `https://cdn.discordapp.com/app-icons/${activity.application_id}/${activity.application_id}.jpg?size=64`;
       }
       return null;
     }
