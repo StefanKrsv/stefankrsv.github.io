@@ -177,7 +177,7 @@
     justify-content: center;
   }
   .discord-activity {
-    background: color-mix(in srgb, var(--dynamic-bg) 95%, #cccccc 5%);
+    background: var(--dynamic-bg);
     border-radius: 8px;
     padding: 0.7em;
     margin-top: 2.5em;
@@ -374,11 +374,9 @@
     let activityEndTime = null;
     let elapsedInterval = null;
     let ws = null;
-    let heartbeatInterval = null;
-    let lastActivityContent = null;
-    let lastType = null;
     let lastImageUrl = null;
     let lastBackgroundColor = null;
+    let heartbeatInterval = null;
 
     function debugLog(message, data = null) {
       console.log(`[Discord Widget] ${message}`, data || '');
@@ -424,41 +422,6 @@
         console.error('Error getting image data:', error);
         callback(null);
       }
-    }
-
-    function getActivityContentHash(data) {
-      let hash = {};
-
-      if (data.listening_to_spotify && data.spotify) {
-        hash = {
-          type: 'spotify',
-          song: data.spotify.song,
-          artist: data.spotify.artist,
-          track_id: data.spotify.track_id
-        };
-      } else if (data.activities?.[0]?.type == 2) {
-        const activity = data.activities[0];
-        hash = {
-          type: 'listening',
-          name: activity.name,
-          details: activity.details,
-          state: activity.state,
-          large_text: activity.assets?.large_text
-        };
-      } else if (data.activities?.length > 0) {
-        const activity = data.activities[0];
-        if (activity.name !== 'Spotify') {
-          hash = {
-            type: 'gaming',
-            name: activity.name,
-            details: activity.details,
-            state: activity.state,
-            party_size: activity.party?.size?.[0] || ''
-          };
-        }
-      }
-
-      return hash;
     }
 
     function createDynamicBackground(color, opacity = 0.4, darken = 0.7) {
@@ -727,104 +690,91 @@
       const activityContainer = container.querySelector('.discord-activity-container');
       if (!activityContainer) return;
 
+      const activity = data.activities?.[0];
       let imageUrl = null;
       let hasActivityWithTime = false;
-
-      const currentContentHash = getActivityContentHash(data);
-      const currentType = currentContentHash.type;
-      console.error('Current type:', currentType);
+      let activityType = null;
 
       if (data.listening_to_spotify && data.spotify) {
+        activityType = 'spotify';
         imageUrl = data.spotify.album_art_url;
         hasActivityWithTime = true;
         startElapsedTimer(data.spotify.timestamps?.start, data.spotify.timestamps?.end);
-        activityContainer.innerHTML = generateSpotifyActivity(data.spotify);
-      } else if (data.activities?.[0]?.type == 2) {
-        hasActivityWithTime = true;
-        const activity = data.activities[0];
+      } else if (activity?.type === 2) {
+        activityType = 'listening';
         imageUrl = `https://media.discordapp.net/${activity.assets.large_image.slice(3)}`;
+        hasActivityWithTime = true;
         startElapsedTimer(activity.timestamps?.start, activity.timestamps?.end);
-        activityContainer.innerHTML = generateListeningActivity(activity, imageUrl);
-      } else if (data.activities?.length > 0) {
-        const activity = data.activities[0];
-        if (activity.name !== 'Spotify') {
-          hasActivityWithTime = true;
-          imageUrl = getActivityImageUrl(activity);
-          if (activity.created_at) {
-            startElapsedTimer(activity.timestamps?.start || activity.created_at);
-          }
-          activityContainer.innerHTML = generateGameActivity(activity, imageUrl);
-        }
+      } else if (activity && activity.name !== 'Spotify') {
+        activityType = 'game';
+        imageUrl = getActivityImageUrl(activity);
+        hasActivityWithTime = true;
+        startElapsedTimer(activity.timestamps?.start || activity.created_at);
       }
-      const typeChanged = currentType !== lastType;
-      const contentChanged = currentContentHash !== lastActivityContent;
+
+      const generateActivityContent = (bgColor = null) => {
+        const activityData = activityType === 'spotify' ? data.spotify : activity;
+
+        switch (activityType) {
+          case 'spotify':
+            return generateSpotifyActivity(activityData, imageUrl, bgColor);
+          case 'game':
+            return generateGameActivity(activityData, imageUrl, bgColor);
+          case 'listening':
+            return generateListeningActivity(activityData, imageUrl, bgColor);
+          default:
+            return '';
+        }
+      };
+
       const imageChanged = imageUrl !== lastImageUrl;
 
-      if (contentChanged) {
-        lastActivityContent = currentContentHash;
+      if (imageChanged) {
+        lastImageUrl = imageUrl;
+        activityContainer.innerHTML = generateActivityContent();
 
         if (imageUrl) {
-          setTimeout(() => {
-            const activityElement = activityContainer.querySelector('.discord-activity');
-            if (activityElement) {
-              if (imageChanged) {
-                lastImageUrl = imageUrl;
-                applyDynamicBackground(imageUrl, activityElement, (bgColor) => {
-                  lastBackgroundColor = bgColor;
-                  console.error('new', lastBackgroundColor);
-                });
-              } else {
-                activityElement.style.setProperty('--dynamic-bg', lastBackgroundColor || '#82838b3f');
-                console.error('last', lastBackgroundColor);
-              }
-            }
-          }, 10);
-        } else {
-          setTimeout(() => {
-            const activityElement = activityContainer.querySelector('.discord-activity');
-            if (activityElement) {
-              const defaultBg = '#82838b3f';
-              console.error('defaulted');
-              activityElement.style.setProperty('--dynamic-bg', defaultBg);
-              lastImageUrl = null;
-              lastBackgroundColor = defaultBg;
-            }
-          }, 10);
-        }
-      } else if (imageChanged && imageUrl) {
-        const activityElement = activityContainer.querySelector('.discord-activity');
-        if (activityElement) {
-          lastImageUrl = imageUrl;
-          applyDynamicBackground(imageUrl, activityElement, (bgColor) => {
+          applyDynamicBackground(imageUrl, container.querySelector('.discord-activity'), (bgColor) => {
             lastBackgroundColor = bgColor;
-            console.error('image&&imageurl');
+            activityContainer.innerHTML = generateActivityContent(bgColor);
           });
         }
+      } else if (lastBackgroundColor && activityType && imageUrl) {
+        activityContainer.innerHTML = generateActivityContent(lastBackgroundColor);
+      } else {
+        activityContainer.innerHTML = generateActivityContent('#82838b3f');
       }
+
       if (!hasActivityWithTime) {
         stopElapsedTimer();
       }
     }
 
-    function generateSpotifyActivity(spotify) {
-      const totalDuration = spotify.timestamps.end - spotify.timestamps.start;
-      const elapsedTime = Date.now() - spotify.timestamps.start;
-      const progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
-      const trackUrl = `https://open.spotify.com/track/${spotify.track_id || '#'}`;
+    function generateSpotifyActivity(spotify, color) {
+      let progressPercentage = 0;
+      let elapsedTime = 0;
 
+      if (spotify.timestamps?.start && spotify.timestamps?.end) {
+        const totalDuration = spotify.timestamps.end - spotify.timestamps.start;
+        elapsedTime = Date.now() - spotify.timestamps.start;
+        progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+      }
+
+      const trackUrl = `https://open.spotify.com/track/${spotify.track_id || '#'}`;
       const createSpotifyLink = (content) =>
         `<a href="${trackUrl}" target="_blank" rel="noopener noreferrer" class="spotify-link">${content}</a>`;
 
-      const timeContainer = spotify.timestamps
-        ? `
-    <div class="music-container">
-      <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(elapsedTime)}</div>
-      <div class="bar"><div class="progress" id="activityProgress" style="width: ${progressPercentage}%;"></div></div>
-      <div class="music-time">${formatTimeElapsed(spotify.timestamps.end - spotify.timestamps.start)}</div>
-    </div>`
-        : '';
+      const timeContainer =
+        spotify.timestamps?.start && spotify.timestamps?.end
+          ? `
+      <div class="music-container">
+        <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(elapsedTime)}</div>
+        <div class="bar"><div class="progress" id="activityProgress" style="width: ${progressPercentage}%;"></div></div>
+        <div class="music-time">${formatTimeElapsed(spotify.timestamps.end - spotify.timestamps.start)}</div>
+      </div>`
+          : '';
 
-      return `<div class="discord-activity" id="discordActivity">
+      return `<div class="discord-activity" id="discordActivity" style="background: ${color}; border: 1px solid color-mix(in srgb, ${color} 85%, #cccccc 15%);">
     <div class="game-activity">
       <div class="game-name">Listening to Spotify</div>
       <div class="game-body">
@@ -839,10 +789,16 @@
   </div>`;
     }
 
-    function generateListeningActivity(activity, imageUrl) {
-      const totalDuration = activity.timestamps.end - activity.timestamps.start;
-      const elapsedTime = Date.now() - activity.timestamps.start;
-      const progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+    function generateListeningActivity(activity, imageUrl, color) {
+      let progressPercentage = 0;
+      let elapsedTime = 0;
+      console.error(color);
+      if (activity.timestamps?.start && activity.timestamps?.end) {
+        const totalDuration = activity.timestamps.end - activity.timestamps.start;
+        elapsedTime = Date.now() - activity.timestamps.start;
+        progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+        console.error('Babka6');
+      }
       const fallbackIcon =
         'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySERWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo=';
       const isYouTubeMusic = activity.name === 'YouTube Music';
@@ -872,18 +828,17 @@
         : '';
       const album = activity.assets?.large_text ? `<div class="game-info">${activity.assets.large_text}</div>` : '';
 
-      const timeContainer = activity.timestamps
-        ? `
+      const timeContainer =
+        activity.timestamps?.start && activity.timestamps?.end
+          ? `
     <div class="music-container">
-      <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(
-        Date.now() - activity.timestamps.start
-      )}</div>
+      <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(elapsedTime)}</div>
       <div class="bar"><div class="progress" id="activityProgress" style="width: ${progressPercentage}%;"></div></div>
       <div class="music-time">${formatTimeElapsed(activity.timestamps.end - activity.timestamps.start)}</div>
     </div>`
-        : '';
+          : '';
 
-      return `<div class="discord-activity" id="discordActivity">
+      return `<div class="discord-activity" id="discordActivity" style="background: ${color}; border: 1px solid color-mix(in srgb, ${color} 85%, #cccccc 15%);">
     <div class="game-activity">
       <div class="game-name">Listening to ${activity.name}</div>
       <div class="game-body">
@@ -899,7 +854,7 @@
   </div>`;
     }
 
-    function generateGameActivity(activity, imageUrl) {
+    function generateGameActivity(activity, imageUrl, color) {
       const gameIconHtml = getGameIconHtml(activity, imageUrl);
 
       const gamepadIcon = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24">
@@ -919,7 +874,7 @@
         return `<div class="game-state">&nbsp;${activity.state}</div>`;
       };
 
-      return `<div class="discord-activity" id="discordActivity">
+      return `<div class="discord-activity" id="discordActivity" style="background: ${color}; border: 1px solid color-mix(in srgb, ${color} 85%, #cccccc 15%);">
     <div class="game-activity">
       <div class="game-name">Playing</div>
       <div class="game-body">
@@ -930,9 +885,9 @@
           <div class="game-info" id="listeningAlbum">${activity.assets?.large_text || ''}</div>
           <div class="game-container">
             ${gamepadIcon}
-            <div class="game-time" id="activityElapsedTime">${formatTimeElapsed(
-              Date.now() - activity.timestamps.start
-            )}</div>
+            <div class="game-time" id="activityElapsedTime">${
+              activity.timestamps?.start ? formatTimeElapsed(Date.now() - activity.timestamps.start) : '0:00'
+            }</div>
             ${getStateContent()}
           </div>
         </div>
