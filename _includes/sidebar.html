@@ -377,7 +377,12 @@
     let lastImageUrl = null;
     let lastBackgroundColor = null;
     let heartbeatInterval = null;
-
+    /* mappings for discord applications, i hope this is temp */
+    const discordIcons = {
+      '363445589247131668': 'f2b60e350a2097289b3b0b877495e55f' /* Roblox */,
+      '1158877933042143272': '558f5a26ecb3b17c3dea3d15c1df537a' /* Cs2 */,
+      '1402418491272986635': '166fbad351ecdd02d11a3b464748f66b' /* Minecraft */
+    };
     function debugLog(message, data = null) {
       console.log(`[Discord Widget] ${message}`, data || '');
     }
@@ -717,7 +722,7 @@
 
         switch (activityType) {
           case 'spotify':
-            return generateSpotifyActivity(activityData, imageUrl, bgColor);
+            return generateSpotifyActivity(activityData, bgColor);
           case 'game':
             return generateGameActivity(activityData, imageUrl, bgColor);
           case 'listening':
@@ -734,6 +739,7 @@
         activityContainer.innerHTML = generateActivityContent();
 
         if (imageUrl) {
+          console.error('Babka7');
           applyDynamicBackground(imageUrl, container.querySelector('.discord-activity'), (bgColor) => {
             lastBackgroundColor = bgColor;
             activityContainer.innerHTML = generateActivityContent(bgColor);
@@ -802,29 +808,31 @@
       const fallbackIcon =
         'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySERWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo=';
       const isYouTubeMusic = activity.name === 'YouTube Music';
-      const searchQuery = isYouTubeMusic
-        ? encodeURIComponent(`${activity.details || ''} ${activity.state || ''}`.trim())
-        : '';
-
-      const createLink = (content, query = searchQuery) =>
-        isYouTubeMusic && query
-          ? `<a href="https://music.youtube.com/search?q=${query}" target="_blank" rel="noopener noreferrer" class="spotify-link">${content}</a>`
-          : content;
 
       const albumImage = activity.details
         ? isYouTubeMusic
-          ? createLink(
-              `<img src="${imageUrl}" alt="Album" class="spotify-album-mini" onerror="this.src='${fallbackIcon}'">`
-            )
+          ? `<a href="${
+              activity.details_url || '#'
+            }" target="_blank" rel="noopener noreferrer" class="spotify-link"><img src="${imageUrl}" alt="Album" class="spotify-album-mini" onerror="this.src='${fallbackIcon}'"></a>`
           : `<img src="${imageUrl}" alt="Game Icon" class="game-icon" onerror="this.src='${fallbackIcon}'">`
         : '';
 
-      const title = activity.details ? createLink(`<div class="music-title">${activity.details}</div>`) : '';
+      const title = activity.details
+        ? `<a
+          href="${activity.details_url || '#'}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="spotify-link"
+        >
+          <div class="music-title">${activity.details}</div>
+        </a>`
+        : '';
       const artist = activity.state
-        ? createLink(
-            `<div class="game-info">${activity.state}</div>`,
-            isYouTubeMusic ? encodeURIComponent(activity.state) : ''
-          )
+        ? `<a href="${
+            activity.state_url || '#'
+          }" target="_blank" rel="noopener noreferrer" class="spotify-link"><div class="game-info">${
+            activity.state
+          }</div></a>`
         : '';
       const album = activity.assets?.large_text ? `<div class="game-info">${activity.assets.large_text}</div>` : '';
 
@@ -903,13 +911,11 @@
         activity.application_id != activity.assets?.large_image
       ) {
         return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.jpg?size=64`;
-      } else if (
-        activity.application_id &&
-        activity.assets?.large_image &&
-        activity.application_id != activity.assets?.large_image
-        /* placeholder i guess */
-      ) {
-        return `https://cdn.discordapp.com/app-icons/${activity.application_id}/${activity.application_id}.jpg?size=64`;
+      }
+      if (activity.application_id && discordIcons[activity.application_id]) {
+        return `https://cdn.discordapp.com/app-icons/${activity.application_id}/${
+          discordIcons[activity.application_id]
+        }.png?size=64`;
       }
       return null;
     }
