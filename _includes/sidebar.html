@@ -377,12 +377,6 @@
     let lastImageUrl = null;
     let lastBackgroundColor = null;
     let heartbeatInterval = null;
-    /* mappings for discord applications, i hope this is temp */
-    const discordIcons = {
-      '363445589247131668': 'f2b60e350a2097289b3b0b877495e55f' /* Roblox */,
-      '1158877933042143272': '558f5a26ecb3b17c3dea3d15c1df537a' /* Cs2 */,
-      '1402418491272986635': '166fbad351ecdd02d11a3b464748f66b' /* Minecraft */
-    };
     function debugLog(message, data = null) {
       console.log(`[Discord Widget] ${message}`, data || '');
     }
@@ -912,10 +906,8 @@
       ) {
         return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.jpg?size=64`;
       }
-      if (activity.application_id && discordIcons[activity.application_id]) {
-        return `https://cdn.discordapp.com/app-icons/${activity.application_id}/${
-          discordIcons[activity.application_id]
-        }.png?size=64`;
+      if (activity.application_id) {
+        return `https://dcdn.dstn.to/app-icons/${activity.application_id}.png?size=64`;
       }
       return null;
     }
