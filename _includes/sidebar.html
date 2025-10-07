@@ -899,16 +899,20 @@
     }
 
     function getActivityImageUrl(activity) {
+      if (activity.assets?.large_image?.startsWith('mp:external')) {
+        return `https://media.discordapp.net/${activity.assets.large_image.replace('mp:', '')}`;
+      }
       if (
         activity.application_id &&
         activity.assets?.large_image &&
         activity.application_id != activity.assets?.large_image
       ) {
-        return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.jpg?size=64`;
+        return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png?size=64`;
       }
       if (activity.application_id) {
-        return `https://dcdn.dstn.to/app-icons/${activity.application_id}.png?size=64`;
+        return `https://dcdn.dstn.to/app-icons/${activity.application_id}?size=64`;
       }
+
       return null;
     }
 
