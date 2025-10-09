@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home</title>
+    <title>{{ page.title | default: site.title }}</title>
     <!-- Standard Favicons -->
     <link rel="apple-touch-icon" sizes="57x57" href="assets/img/favicons/apple-icon-57x57.png">
     <link rel="apple-touch-icon" sizes="60x60" href="assets/img/favicons/apple-icon-60x60.png">
@@ -21,7 +21,146 @@
     <meta name="msapplication-TileColor" content="#ffffff">
     <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
     <meta name="theme-color" content="#ffffff">
+  </head>
+  <body>
+    <div id="typewriter"></div>
+    <script>
+      const actions = [
+        { type: 'add', char: 'h', time: 732 },
+        { type: 'add', char: 'i', time: 785 },
+        { type: 'add', char: ' ', time: 1020 },
+        { type: 'add', char: ':', time: 1615 },
+        { type: 'add', char: '0', time: 2058 },
+        { type: 'enter', time: 2722 },
+        { type: 'add', char: 'i', time: 3549 },
+        { type: 'add', char: 'm', time: 3647 },
+        { type: 'add', char: ' ', time: 3857 },
+        { type: 'add', char: 's', time: 4007 },
+        { type: 'add', char: 't', time: 4104 },
+        { type: 'add', char: 'e', time: 4204 },
+        { type: 'add', char: 'p', time: 4472 },
+        { type: 'add', char: 'h', time: 4805 },
+        { type: 'add', char: 'a', time: 4966 },
+        { type: 'delete', time: 5227 },
+        { type: 'delete', time: 5377 },
+        { type: 'delete', time: 5637 },
+        { type: 'add', char: 'f', time: 6246 },
+        { type: 'delete', time: 6594 },
+        { type: 'add', char: 'p', time: 7177 },
+        { type: 'add', char: 'a', time: 7391 },
+        { type: 'add', char: 'n', time: 7459 },
+        { type: 'enter', time: 7883 },
+        { type: 'add', char: 'm', time: 9583 },
+        { type: 'add', char: 'y', time: 9798 },
+        { type: 'add', char: ' ', time: 9975 },
+        { type: 'add', char: 'w', time: 10176 },
+        { type: 'add', char: 'e', time: 10261 },
+        { type: 'add', char: 'b', time: 10588 },
+        { type: 'add', char: 's', time: 11087 },
+        { type: 'add', char: 'i', time: 11249 },
+        { type: 'add', char: 't', time: 11405 },
+        { type: 'add', char: 'e', time: 11485 },
+        { type: 'add', char: ' ', time: 11627 },
+        { type: 'add', char: 'i', time: 12302 },
+        { type: 'add', char: 's', time: 12440 },
+        { type: 'add', char: ' ', time: 12554 },
+        { type: 'add', char: 'e', time: 12700 },
+        { type: 'add', char: 'm', time: 12841 },
+        { type: 'add', char: 'p', time: 13018 },
+        { type: 'add', char: 't', time: 13303 },
+        { type: 'add', char: 'y', time: 13421 },
+        { type: 'add', char: ' ', time: 13528 },
+        { type: 'add', char: 'f', time: 13804 },
+        { type: 'add', char: 'o', time: 13893 },
+        { type: 'add', char: 'r', time: 14014 },
+        { type: 'add', char: ' ', time: 14136 },
+        { type: 'add', char: 'n', time: 14334 },
+        { type: 'add', char: 'o', time: 14460 },
+        { type: 'add', char: 'w', time: 14547 },
+        { type: 'enter', time: 14840 },
+        { type: 'add', char: 'y', time: 15845 },
+        { type: 'add', char: 'o', time: 15940 },
+        { type: 'add', char: 'u', time: 16149 },
+        { type: 'add', char: ' ', time: 16263 },
+        { type: 'add', char: 'c', time: 16758 },
+        { type: 'add', char: 'a', time: 16968 },
+        { type: 'add', char: 'n', time: 17075 },
+        { type: 'add', char: ' ', time: 17188 },
+        { type: 'add', char: 'f', time: 17324 },
+        { type: 'add', char: 'i', time: 17467 },
+        { type: 'add', char: 'n', time: 17647 },
+        { type: 'add', char: 'd', time: 17770 },
+        { type: 'add', char: ' ', time: 17885 },
+        { type: 'add', char: 'm', time: 18171 },
+        { type: 'add', char: 'y', time: 18505 },
+        { type: 'add', char: ' ', time: 18641 },
+        { type: 'add', char: 'b', time: 18836 },
+        { type: 'add', char: 'l', time: 19025 },
+        { type: 'add', char: 'o', time: 19150 },
+        { type: 'add', char: 'g', time: 19257 },
+        { type: 'add', char: ' ', time: 19372 },
+        { type: 'add', char: 'h', time: 19584 },
+        { type: 'add', char: 'e', time: 19667 },
+        { type: 'add', char: 'r', time: 19853 },
+        { type: 'add', char: 'e', time: 20016 },
+        { type: 'add', char: ';', time: 20390 },
+        { type: 'delete', time: 20866 },
+        { type: 'add', char: '`', time: 21044 },
+        { type: 'add', char: ';', time: 21255 },
+        { type: 'delete', time: 21661 },
+        { type: 'delete', time: 21807 },
+        { type: 'add', char: '`', time: 21983 },
+        { type: 'add', char: ';', time: 22100 },
+        { type: 'delete', time: 22630 },
+        { type: 'delete', time: 22781 },
+        { type: 'add', char: ':', time: 23590 },
+        { type: 'enter', time: 24023 }
+      ];
+      let index = 0;
+      const element = document.getElementById('typewriter');
+      let isTyping = true;
+      let plainText = '';
 
+      let fullText = '';
+      for (const action of actions) {
+        if (action.type === 'add') {
+          fullText += action.char;
+        } else if (action.type === 'delete') {
+          fullText = fullText.slice(0, -1);
+        } else if (action.type === 'enter') {
+          fullText += '\n';
+        }
+      }
 
+      function updateDisplay() {
+        element.innerHTML = plainText.replace(/\n/g, '<br>').replace(/blog/g, '<a href="/blog">blog</a>');
+      }
+
+      function typeWriter() {
+        if (!isTyping) return;
+        if (index < actions.length) {
+          const action = actions[index];
+          if (action.type === 'add') {
+            plainText += action.char;
+          } else if (action.type === 'delete') {
+            plainText = plainText.slice(0, -1);
+          } else if (action.type === 'enter') {
+            plainText += '\n';
+          }
+          updateDisplay();
+          index++;
+          const nextTime = index < actions.length ? actions[index].time : action.time;
+          const delay = nextTime - action.time;
+          setTimeout(typeWriter, 0.8 * delay);
+        }
+      }
+
+      typeWriter();
+
+      document.addEventListener('click', () => {
+        isTyping = false;
+        element.innerHTML = fullText.replace(/\n/g, '<br>').replace(/blog/g, '<a href="/blog">blog</a>');
+      });
+    </script>
   </body>
 </html>

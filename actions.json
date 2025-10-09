@@ -1,0 +1,303 @@
+{
+  "actions": [
+    {
+      "type": "add",
+      "char": "h",
+      "time": 905
+    },
+    {
+      "type": "add",
+      "char": "i",
+      "time": 969
+    },
+    {
+      "type": "add",
+      "char": " ",
+      "time": 1164
+    },
+    {
+      "type": "add",
+      "char": ":",
+      "time": 1747
+    },
+    {
+      "type": "add",
+      "char": "0",
+      "time": 2237
+    },
+    {
+      "type": "enter",
+      "time": 2894
+    },
+    {
+      "type": "add",
+      "char": "i",
+      "time": 3578
+    },
+    {
+      "type": "add",
+      "char": "m",
+      "time": 3611
+    },
+    {
+      "type": "add",
+      "char": " ",
+      "time": 4022
+    },
+    {
+      "type": "add",
+      "char": "s",
+      "time": 4268
+    },
+    {
+      "type": "add",
+      "char": "t",
+      "time": 4323
+    },
+    {
+      "type": "add",
+      "char": "e",
+      "time": 4483
+    },
+    {
+      "type": "add",
+      "char": "p",
+      "time": 4960
+    },
+    {
+      "type": "add",
+      "char": "h",
+      "time": 5278
+    },
+    {
+      "type": "delete",
+      "time": 5590
+    },
+    {
+      "type": "delete",
+      "time": 5741
+    },
+    {
+      "type": "add",
+      "char": "f",
+      "time": 6448
+    },
+    {
+      "type": "delete",
+      "time": 6593
+    },
+    {
+      "type": "add",
+      "char": "p",
+      "time": 7334
+    },
+    {
+      "type": "add",
+      "char": "a",
+      "time": 7476
+    },
+    {
+      "type": "add",
+      "char": "n",
+      "time": 7651
+    },
+    {
+      "type": "enter",
+      "time": 8014
+    },
+    {
+      "type": "add",
+      "char": "m",
+      "time": 9662
+    },
+    {
+      "type": "add",
+      "char": "y",
+      "time": 9891
+    },
+    {
+      "type": "add",
+      "char": " ",
+      "time": 10034
+    },
+    {
+      "type": "add",
+      "char": "w",
+      "time": 10301
+    },
+    {
+      "type": "add",
+      "char": "e",
+      "time": 10423
+    },
+    {
+      "type": "add",
+      "char": "b",
+      "time": 10594
+    },
+    {
+      "type": "add",
+      "char": "s",
+      "time": 10741
+    },
+    {
+      "type": "add",
+      "char": "i",
+      "time": 10863
+    },
+    {
+      "type": "add",
+      "char": "t",
+      "time": 11072
+    },
+    {
+      "type": "add",
+      "char": "e",
+      "time": 11159
+    },
+    {
+      "type": "add",
+      "char": " ",
+      "time": 11248
+    },
+    {
+      "type": "add",
+      "char": "i",
+      "time": 11528
+    },
+    {
+      "type": "add",
+      "char": "s",
+      "time": 11590
+    },
+    {
+      "type": "add",
+      "char": " ",
+      "time": 11712
+    },
+    {
+      "type": "add",
+      "char": "c",
+      "time": 11966
+    },
+    {
+      "type": "add",
+      "char": "u",
+      "time": 12439
+    },
+    {
+      "type": "add",
+      "char": "r",
+      "time": 12644
+    },
+    {
+      "type": "add",
+      "char": "r",
+      "time": 12834
+    },
+    {
+      "type": "add",
+      "char": "e",
+      "time": 12920
+    },
+    {
+      "type": "add",
+      "char": "n",
+      "time": 13082
+    },
+    {
+      "type": "add",
+      "char": "t",
+      "time": 13122
+    },
+    {
+      "type": "add",
+      "char": "l",
+      "time": 13414
+    },
+    {
+      "type": "add",
+      "char": "y",
+      "time": 13820
+    },
+    {
+      "type": "add",
+      "char": " ",
+      "time": 14022
+    },
+    {
+      "type": "add",
+      "char": "e",
+      "time": 14218
+    },
+    {
+      "type": "add",
+      "char": "m",
+      "time": 14350
+    },
+    {
+      "type": "add",
+      "char": "p",
+      "time": 14470
+    },
+    {
+      "type": "add",
+      "char": "t",
+      "time": 14807
+    },
+    {
+      "type": "add",
+      "char": "y",
+      "time": 14850
+    },
+    {
+      "type": "enter",
+      "time": 15865
+    },
+    {
+      "type": "add",
+      "char": "i",
+      "time": 16972
+    },
+    {
+      "type": "add",
+      "char": " ",
+      "time": 17159
+    },
+    {
+      "type": "add",
+      "char": "o",
+      "time": 17432
+    },
+    {
+      "type": "add",
+      "char": "h",
+      "time": 17460
+    },
+    {
+      "type": "delete",
+      "time": 18231
+    },
+    {
+      "type": "delete",
+      "time": 18732
+    },
+    {
+      "type": "delete",
+      "time": 18816
+    },
+    {
+      "type": "delete",
+      "time": 18898
+    },
+    {
+      "type": "delete",
+      "time": 18983
+    },
+    {
+      "type": "delete",
+      "time": 19067
+    }
+  ],
+  "finalText": "hi :0im stepanmy website is currently emp"
+}
