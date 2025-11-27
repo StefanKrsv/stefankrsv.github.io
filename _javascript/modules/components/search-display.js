@@ -76,7 +76,7 @@ class ResultSwitch {
       content.forEach((el) => {
         el.classList.remove(UNLOADED);
       });
-      if (input) input.value = ''; // Fixed: use 'value' instead of 'textContent'
+      if (input) input.value = '';
       this.resultVisible = false;
     }
   }
@@ -91,8 +91,9 @@ function isMobileView() {
   return btnCancel && btnCancel.classList.contains(LOADED);
 }
 
-// Store event listeners for cleanup
+// Store event listeners and search instance for cleanup
 let searchEventListeners = [];
+let simpleJekyllSearchInstance = null;
 
 function addEventListenerWithCleanup(element, event, handler) {
   if (element) {
@@ -166,6 +167,64 @@ function setupSearchListeners() {
   addEventListenerWithCleanup(input, 'input', handleInput);
 }
 
+// Initialize SimpleJekyllSearch
+function initializeSimpleJekyllSearch() {
+  // Check if SimpleJekyllSearch is available
+  if (typeof SimpleJekyllSearch === 'undefined') {
+    console.warn('SimpleJekyllSearch is not loaded yet');
+    return;
+  }
+
+  const searchInput = document.getElementById('search-input');
+  const resultsContainer = document.getElementById('search-results');
+
+  if (!searchInput || !resultsContainer) {
+    return;
+  }
+
+  // Clear previous instance if exists
+  if (resultsContainer) {
+    resultsContainer.innerHTML = '';
+  }
+
+  // Get the search result template from the page
+  const templateElement = document.getElementById('search-result-template');
+  const notFoundElement = document.getElementById('search-not-found-template');
+
+  const resultTemplate = templateElement 
+    ? templateElement.innerHTML 
+    : '<article class="px-1 px-sm-2 px-lg-4 px-xl-0"><header><h2><a href="{url}">{title}</a></h2><div class="post-meta d-flex flex-column flex-sm-row text-muted mt-1 mb-1">{categories}{tags}</div></header><p>{content}</p></article>';
+
+  const notFoundText = notFoundElement 
+    ? notFoundElement.innerHTML 
+    : '<p class="mt-5">No results found</p>';
+
+  // Initialize SimpleJekyllSearch
+  simpleJekyllSearchInstance = SimpleJekyllSearch({
+    searchInput: searchInput,
+    resultsContainer: resultsContainer,
+    json: document.querySelector('[data-search-json]')?.dataset.searchJson || '/assets/js/data/search.json',
+    searchResultTemplate: resultTemplate,
+    noResultsText: notFoundText,
+    templateMiddleware: function(prop, value, template) {
+      if (prop === 'categories') {
+        if (value === '') {
+          return `${value}`;
+        } else {
+          return `<div class="me-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`;
+        }
+      }
+      if (prop === 'tags') {
+        if (value === '') {
+          return `${value}`;
+        } else {
+          return `<div><i class="fa fa-tag fa-fw"></i>${value}</div>`;
+        }
+      }
+    }
+  });
+}
+
 // Main initialization function
 export function displaySearch() {
   // Clean up any existing listeners
@@ -174,8 +233,11 @@ export function displaySearch() {
   // Reset state
   ResultSwitch.reset();
 
-  // Setup new listeners
+  // Setup UI event listeners
   setupSearchListeners();
+
+  // Initialize SimpleJekyllSearch
+  initializeSimpleJekyllSearch();
 }
 
 // Turbo event handlers
@@ -188,6 +250,7 @@ function handleTurboBeforeVisit() {
   cleanupEventListeners();
   ResultSwitch.off();
   MobileSearchBar.off();
+  simpleJekyllSearchInstance = null;
 }
 
 function handleTurboRender() {
@@ -195,10 +258,25 @@ function handleTurboRender() {
   displaySearch();
 }
 
-// Initialize on DOM content loaded (for initial page load)
+function handleTurboBeforeCache() {
+  // Reset search state before page is cached
+  ResultSwitch.off();
+  MobileSearchBar.off();
+  const input = document.getElementById('search-input');
+  if (input) input.value = '';
+}
+
+function handleTurboBeforeStreamRender() {
+  // Clean up search state before Turbo streams update the page
+  ResultSwitch.off();
+  MobileSearchBar.off();
+}
+
+// Initialize on DOM content loaded (for initial page load without Turbo)
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', displaySearch);
 } else {
+  // Document already loaded
   displaySearch();
 }
 
@@ -206,19 +284,5 @@ if (document.readyState === 'loading') {
 document.addEventListener('turbo:load', handleTurboLoad);
 document.addEventListener('turbo:before-visit', handleTurboBeforeVisit);
 document.addEventListener('turbo:render', handleTurboRender);
-
-// Optional: Handle Turbo form submissions that might affect search
-document.addEventListener('turbo:before-stream-render', () => {
-  // Clean up search state before Turbo streams update the page
-  ResultSwitch.off();
-  MobileSearchBar.off();
-});
-
-// Handle page cache restoration
-document.addEventListener('turbo:before-cache', () => {
-  // Reset search state before page is cached
-  ResultSwitch.off();
-  MobileSearchBar.off();
-  const input = document.getElementById('search-input');
-  if (input) input.value = '';
-});
+document.addEventListener('turbo:before-stream-render', handleTurboBeforeStreamRender);
+document.addEventListener('turbo:before-cache', handleTurboBeforeCache);
