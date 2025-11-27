@@ -4,7 +4,7 @@
 -->
 
 <!-- Hidden templates for search results -->
-<template id="search-result-template">
+<script type="text/template" id="search-result-template">
   <article class="px-1 px-sm-2 px-lg-4 px-xl-0">
     <header>
       <h2><a href="{url}">{title}</a></h2>
@@ -15,11 +15,11 @@
     </header>
     <p>{content}</p>
   </article>
-</template>
+</script>
 
-<template id="search-not-found-template">
+<script type="text/template" id="search-not-found-template">
   <p class="mt-5">{{ site.data.locales[include.lang].search.no_results }}</p>
-</template>
+</script>
 
 <!-- Data attribute for search JSON path -->
 <div data-search-json="{{ '/assets/js/data/search.json' | relative_url }}" style="display: none;"></div>
