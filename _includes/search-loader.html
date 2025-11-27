@@ -3,7 +3,8 @@
   See: <https://github.com/christian-fei/Simple-Jekyll-Search>
 -->
 
-{% capture result_elem %}
+<!-- Hidden templates for search results -->
+<template id="search-result-template">
   <article class="px-1 px-sm-2 px-lg-4 px-xl-0">
     <header>
       <h2><a href="{url}">{title}</a></h2>
@@ -14,19 +15,52 @@
     </header>
     <p>{content}</p>
   </article>
-{% endcapture %}
+</template>
 
-{% capture not_found %}<p class="mt-5">{{ site.data.locales[include.lang].search.no_results }}</p>{% endcapture %}
+<template id="search-not-found-template">
+  <p class="mt-5">{{ site.data.locales[include.lang].search.no_results }}</p>
+</template>
 
-<script>
-  {% comment %} Note: dependent library will be loaded in `js-selector.html` {% endcomment %}
-  document.addEventListener('DOMContentLoaded', () => {
+<!-- Data attribute for search JSON path -->
+<div data-search-json="{{ '/assets/js/data/search.json' | relative_url }}" style="display: none;"></div>
+
+<!-- Turbo-compatible script that runs on every page load -->
+<script type="module">
+  // This will run on every Turbo navigation
+  function initializeSearch() {
+    // Check if SimpleJekyllSearch is available
+    if (typeof SimpleJekyllSearch === 'undefined') {
+      console.warn('SimpleJekyllSearch is not loaded yet');
+      return;
+    }
+
+    const searchInput = document.getElementById('search-input');
+    const resultsContainer = document.getElementById('search-results');
+
+    if (!searchInput || !resultsContainer) {
+      return;
+    }
+
+    // Clear previous results
+    resultsContainer.innerHTML = '';
+
+    // Get templates
+    const templateElement = document.getElementById('search-result-template');
+    const notFoundElement = document.getElementById('search-not-found-template');
+
+    const resultTemplate = templateElement ? templateElement.innerHTML.trim() : '';
+    const notFoundText = notFoundElement ? notFoundElement.innerHTML.trim() : '';
+
+    // Get search JSON path
+    const searchJsonPath = document.querySelector('[data-search-json]')?.dataset.searchJson || '{{ '/assets/js/data/search.json' | relative_url }}';
+
+    // Initialize SimpleJekyllSearch
     SimpleJekyllSearch({
-      searchInput: document.getElementById('search-input'),
-      resultsContainer: document.getElementById('search-results'),
-      json: '{{ '/assets/js/data/search.json' | relative_url }}',
-      searchResultTemplate: '{{ result_elem | strip_newlines }}',
-      noResultsText: '{{ not_found }}',
+      searchInput: searchInput,
+      resultsContainer: resultsContainer,
+      json: searchJsonPath,
+      searchResultTemplate: resultTemplate,
+      noResultsText: notFoundText,
       templateMiddleware: function(prop, value, template) {
         if (prop === 'categories') {
           if (value === '') {
@@ -35,7 +69,6 @@
             return `<div class="me-sm-4"><i class="far fa-folder fa-fw"></i>${value}</div>`;
           }
         }
-
         if (prop === 'tags') {
           if (value === '') {
             return `${value}`;
@@ -45,5 +78,16 @@
         }
       }
     });
-  });
+  }
+
+  // Initialize on Turbo events
+  document.addEventListener('turbo:load', initializeSearch);
+  document.addEventListener('turbo:render', initializeSearch);
+
+  // Initialize immediately if Turbo hasn't loaded yet (fallback)
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSearch);
+  } else {
+    initializeSearch();
+  }
 </script>
