@@ -20,8 +20,7 @@
 
 <script>
   {% comment %} Note: dependent library will be loaded in `js-selector.html` {% endcomment %}
-
-  function initSearch() {
+  document.addEventListener('DOMContentLoaded', () => {
     SimpleJekyllSearch({
       searchInput: document.getElementById('search-input'),
       resultsContainer: document.getElementById('search-results'),
@@ -46,8 +45,5 @@
         }
       }
     });
-  }
-
-  document.addEventListener('DOMContentLoaded', initSearch);
-  document.addEventListener('turbo:load', initSearch);
+  });
 </script>

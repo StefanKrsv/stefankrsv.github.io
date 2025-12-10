@@ -1,5 +1,5 @@
 /**
- * Setting up image lazy loading and LQIP switching with Turbo support
+ * Setting up image lazy loading and LQIP switching
  */
 
 const ATTR_DATA_SRC = 'data-src';
@@ -11,7 +11,7 @@ const cover = {
 };
 
 function removeCover(clzss) {
-  this.parentElement?.classList.remove(clzss);
+  this.parentElement.classList.remove(clzss);
 }
 
 function handleImage() {
@@ -35,7 +35,7 @@ function switchLQIP() {
   this.removeAttribute(ATTR_DATA_SRC);
 }
 
-function initializeImages() {
+export function loadImg() {
   const images = document.querySelectorAll('article img');
 
   if (images.length === 0) {
@@ -43,19 +43,18 @@ function initializeImages() {
   }
 
   images.forEach((img) => {
-    // Remove existing listeners to prevent duplicates
-    img.removeEventListener('load', handleImage);
     img.addEventListener('load', handleImage);
   });
 
-  // Handle images loaded from browser cache
+  // Images loaded from the browser cache do not trigger the 'load' event
   document.querySelectorAll('article img[loading="lazy"]').forEach((img) => {
     if (img.complete) {
       removeCover.call(img, cover.SHIMMER);
     }
   });
 
-  // Handle LQIP images
+  // LQIPs set by the data URI or WebP will not trigger the 'load' event,
+  // so manually convert the URI to the URL of a high-resolution image.
   const lqips = document.querySelectorAll(
     `article img[${ATTR_DATA_LQIP}="true"]`
   );
@@ -65,13 +64,4 @@ function initializeImages() {
       switchLQIP.call(lqip);
     });
   }
-}
-
-export function loadImg() {
-  // Initial load
-  initializeImages();
-  console.log('img load');
-  // Handle Turbo navigation events
-  document.addEventListener('turbo:load', initializeImages);
-  document.addEventListener('turbo:render', initializeImages);
 }
