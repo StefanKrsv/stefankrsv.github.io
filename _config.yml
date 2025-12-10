@@ -208,13 +208,6 @@ compress_html:
 include:
   - assets
 
-# Add cache control headers for better update behavior
-defaults:
-  - scope:
-      path: ""
-    values:
-      cache_control: "max-age=0, must-revalidate"
-
 exclude:
   - "*.gem"
   - "*.gemspec"
