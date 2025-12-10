@@ -150,7 +150,7 @@ paginate: 10
 # The base URL of your site.
 # If your site is hosted in a subdirectory (e.g., https://example.com/blog), set this to '/blog'.
 # If hosted at the root domain, leave it as an empty string.
-baseurl: "/blog"
+baseurl: ""
 
 # ------------ The following options are not recommended to be modified ------------------
 
@@ -204,6 +204,9 @@ compress_html:
   blanklines: false
   ignore:
     envs: [development]
+
+include:
+  - assets
 
 exclude:
   - "*.gem"
