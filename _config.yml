@@ -121,7 +121,7 @@ comments:
     repo_id: R_kgDOPm25sw
     category: Announcements
     category_id: DIC_kwDOPm25s84CuxRn
-    theme: # optional, default to 'theme map'
+    theme: noborder_dark # optional, default to 'theme map'
     mapping: # optional, default to 'pathname'
     strict: # optional, default to '0'
     input_position: top
