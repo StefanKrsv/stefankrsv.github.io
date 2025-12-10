@@ -4,18 +4,3 @@
   src="https://gc.zgo.at/count.js"
   data-goatcounter="https://{{ site.analytics.goatcounter.id }}.goatcounter.com/count"
 ></script>
-
-<script>
-  // Track page views on Turbo navigations
-  function trackGoatCounter() {
-    if (window.goatcounter && typeof window.goatcounter.count === 'function') {
-      window.goatcounter.count({
-        path: window.location.pathname + window.location.search,
-        title: document.title,
-        referrer: document.referrer
-      });
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', trackGoatCounter);
-</script>
