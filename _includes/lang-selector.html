@@ -1,17 +1,13 @@
 <link rel="stylesheet" href="{{ '/assets/css/lang-selector.css' | relative_url }}">
 
 <div class="lang-dropdown">
-  <select
-    class="lang-select"
-    aria-label="Select Language"
-    onchange="changeLang(this.value, this.options[this.selectedIndex].dataset.lang)"
-  >
+  <select id="langSelect" class="lang-select" aria-label="Select Language">
     {%- for lang in site.languages -%}
       <option
         data-lang="{{ lang }}"
         value="{% if lang == site.default_lang %}{{ page.url }}{% else %}/{{ lang }}{{ page.url }}{% endif %}"
         {% if lang == site.active_lang %}
-          selected
+          selected="selected"
         {% endif %}
       >
         {% case lang %}
@@ -22,7 +18,7 @@
           {% when 'de' -%}
             🇩🇪 German
           {% else -%}
-            {{ lang }}
+            {{- lang }}
         {% endcase %}
       </option>
     {%- endfor -%}
@@ -32,32 +28,65 @@
 <script>
   (function () {
     const STORAGE_KEY = 'preferred_lang';
+    const selectEl = document.getElementById('langSelect');
+    if (!selectEl) return;
 
-    // Auto-detect ONLY on first visit and ONLY on homepage
-    const isHome = window.location.pathname === '/blog/';
+    const supported = Array.from(selectEl.options)
+      .map((o) => o.dataset.lang)
+      .filter(Boolean);
+    const activeLang = '{{ site.active_lang }}';
 
-    if (isHome && !localStorage.getItem(STORAGE_KEY)) {
-      const browserLang = (navigator.language || '').toLowerCase();
-      let detected = 'en';
+    const normalizeLang = (tag) => (tag ? String(tag).toLowerCase().split('-')[0] : null);
 
-      if (browserLang.startsWith('fr')) detected = 'fr';
-      if (browserLang.startsWith('de')) detected = 'de';
-      console.log('Detected language:', detected);
+    const getBrowserPreferredLang = () => {
+      const langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+      for (const tag of langs) {
+        const base = normalizeLang(tag);
+        if (base && supported.includes(base)) return base;
+      }
+      return null;
+    };
 
-      const select = document.querySelector('.lang-select');
-      if (!select) return;
+    const urlForLang = (lang) => {
+      const opt = Array.from(selectEl.options).find((o) => o.dataset.lang === lang);
+      return opt ? opt.value : null;
+    };
 
-      const option = [...select.options].find((o) => o.dataset.lang === detected);
+    const samePath = (targetUrl) => {
+      try {
+        const target = new URL(targetUrl, window.location.origin);
+        return target.pathname === window.location.pathname;
+      } catch (e) {
+        return false;
+      }
+    };
 
-      if (option && detected !== '{{ site.default_lang }}') {
-        localStorage.setItem(STORAGE_KEY, detected);
-        window.location.replace(option.value);
+    const stored = normalizeLang(localStorage.getItem(STORAGE_KEY));
+
+    if (stored && supported.includes(stored) && stored !== activeLang) {
+      const target = urlForLang(stored);
+      if (target && !samePath(target)) {
+        window.location.replace(target);
+        return;
       }
     }
-  })();
 
-  function changeLang(url, lang) {
-    localStorage.setItem('preferred_lang', lang);
-    window.location.href = url;
-  }
+    if (!stored) {
+      const preferred = getBrowserPreferredLang();
+      if (preferred && preferred !== activeLang) {
+        const target = urlForLang(preferred);
+        if (target && !samePath(target)) {
+          localStorage.setItem(STORAGE_KEY, preferred);
+          window.location.replace(target);
+          return;
+        }
+      }
+    }
+
+    selectEl.addEventListener('change', () => {
+      const chosenLang = selectEl.options[selectEl.selectedIndex].dataset.lang;
+      if (chosenLang) localStorage.setItem(STORAGE_KEY, normalizeLang(chosenLang));
+      window.location.href = selectEl.value;
+    });
+  })();
 </script>
