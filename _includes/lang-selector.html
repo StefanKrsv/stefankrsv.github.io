@@ -1,9 +1,14 @@
 <link rel="stylesheet" href="{{ '/assets/css/lang-selector.css' | relative_url }}">
 
 <div class="lang-dropdown">
-  <select class="lang-select" onchange="changeLang(this.value)" aria-label="Select Language">
+  <select
+    class="lang-select"
+    aria-label="Select Language"
+    onchange="changeLang(this.value, this.options[this.selectedIndex].dataset.lang)"
+  >
     {%- for lang in site.languages -%}
       <option
+        data-lang="{{ lang }}"
         value="{% if lang == site.default_lang %}{{ page.url }}{% else %}/{{ lang }}{{ page.url }}{% endif %}"
         {% if lang == site.active_lang %}
           selected
@@ -17,7 +22,7 @@
           {% when 'de' -%}
             🇩🇪 German
           {% else -%}
-            {{- lang }}
+            {{ lang }}
         {% endcase %}
       </option>
     {%- endfor -%}
@@ -25,7 +30,34 @@
 </div>
 
 <script>
-  function changeLang(url) {
+  (function () {
+    const STORAGE_KEY = 'preferred_lang';
+
+    // Auto-detect ONLY on first visit and ONLY on homepage
+    const isHome = window.location.pathname === '/blog/';
+
+    if (isHome && !localStorage.getItem(STORAGE_KEY)) {
+      const browserLang = (navigator.language || '').toLowerCase();
+      let detected = 'en';
+
+      if (browserLang.startsWith('fr')) detected = 'fr';
+      if (browserLang.startsWith('de')) detected = 'de';
+      console.log('Detected language:', detected);
+
+      const select = document.querySelector('.lang-select');
+      if (!select) return;
+
+      const option = [...select.options].find((o) => o.dataset.lang === detected);
+
+      if (option && detected !== '{{ site.default_lang }}') {
+        localStorage.setItem(STORAGE_KEY, detected);
+        window.location.replace(option.value);
+      }
+    }
+  })();
+
+  function changeLang(url, lang) {
+    localStorage.setItem('preferred_lang', lang);
     window.location.href = url;
   }
 </script>
