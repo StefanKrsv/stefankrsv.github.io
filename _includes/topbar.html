@@ -16,7 +16,7 @@
         {% for item in paths %}
           {% if forloop.first %}
             <span>
-              <a href="{{ '/' | relative_url }}">
+              <a href="{{ '/blog' | relative_url }}">
                 {{- site.data.locales[include.lang].tabs.home | capitalize -}}
               </a>
             </span>
