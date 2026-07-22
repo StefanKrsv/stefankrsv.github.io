@@ -107,16 +107,8 @@
     <link rel="stylesheet" href="{{ site.data.origin[type].glightbox.css | relative_url }}">
   {% endif %}
 
-  <!-- Scripts -->
-  <!--
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@latest/dist/turbo.es2017-esm.min.js"></script>
-  -->
+  <!-- The theme switcher runs early to avoid a flash of the wrong color scheme. -->
   <script src="{{ '/assets/js/dist/theme.min.js' | relative_url }}"></script>
-  <script
-    type="module"
-    src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
-  ></script>
-  {% include js-selector.html lang=lang %}
 
   {% if jekyll.environment == 'production' %}
     <!-- PWA -->

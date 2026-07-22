@@ -76,6 +76,16 @@ layout: compress
       {% include_cached notification.html lang=lang %}
     {% endif %}
 
+    <!-- Page scripts are kept at the end so they do not block rendering. -->
+    {% if page.esp_web_tools %}
+      <script
+        type="module"
+        src="https://unpkg.com/esp-web-tools@10/dist/web/install-button.js?module"
+      ></script>
+    {% endif %}
+
+    {% include js-selector.html lang=lang %}
+
     <!-- Embedded scripts -->
 
     {% for _include in layout.script_includes %}

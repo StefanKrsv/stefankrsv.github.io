@@ -16,7 +16,7 @@
     <ul class="nav">
       <!-- projects -->
       <li class="nav-item{% if page.layout == 'home' %}{{ " active" }}{% endif %}">
-        <a href="{{ '/blog/' | relative_url }}" class="nav-link">
+        <a href="{{ '/' | relative_url }}" class="nav-link">
           <i class="fa-solid fa-newspaper"></i>
           <span>BLOG</span>
         </a>
@@ -936,7 +936,7 @@
       container.innerHTML = `
         <div class="discord-top-section">
           <a href="https://discord.com/users/${DISCORD_ID}" target="_blank" rel="noopener noreferrer" class="discord-avatar-wrapper">
-            <img src="" alt="Discord Avatar" class="discord-avatar" onerror="this.style.display='none'">
+            <img alt="Discord Avatar" class="discord-avatar" onerror="this.style.display='none'">
             <div class="discord-status-badge status-offline"></div>
           </a>
           <div class="discord-text-info">

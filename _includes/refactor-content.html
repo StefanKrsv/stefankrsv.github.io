@@ -158,7 +158,7 @@
 
     <!-- lazy-load images -->
     {% if _lazyload %}
-      {% assign _left = _left | append: ' loading="lazy"' %}
+      {% assign _left = _left | append: ' loading="lazy" decoding="async"' %}
     {% endif %}
 
     {% if page.layout == 'home' %}
