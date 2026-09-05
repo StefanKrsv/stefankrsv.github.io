@@ -75,6 +75,7 @@ cleanup();
 
 export default [
   build('commons'),
+  build('discord'),
   build('home'),
   build('categories'),
   build('page'),

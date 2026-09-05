@@ -3,11 +3,12 @@ layout: compress
 swcache: true
 ---
 
+{% capture language_prefix %}{{ site.baseurl }}{% if site.active_lang != site.default_lang %}/{{ site.active_lang }}{% endif %}{% endcapture %}
 [
   {% for post in site.posts %}
   {
     "title": {{ post.title | jsonify }},
-    "url": {{ post.url | relative_url | jsonify }},
+    "url": {{ post.url | prepend: language_prefix | jsonify }},
     "categories": {{ post.categories | join: ', ' | jsonify }},
     "tags": {{ post.tags | join: ', ' | jsonify }},
     "date": {{ post.date | jsonify }},

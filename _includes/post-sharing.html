@@ -5,7 +5,8 @@
   <span class="share-icons">
     {% capture title %}{{ page.title }} - {{ site.title }}{% endcapture %}
     {% assign title = title | uri_escape %}
-    {% assign url = page.url | absolute_url | url_encode %}
+    {% capture localized_url %}{{ site.url }}{{ site.baseurl }}{% if site.active_lang != site.default_lang %}/{{ site.active_lang }}{% endif %}{{ page.url }}{% endcapture %}
+    {% assign url = localized_url | url_encode %}
 
     {% for share in site.data.share.platforms -%}
       {%- capture tooltip -%}

@@ -47,6 +47,15 @@ refactor: true
   {% endfor %}
 {% endif %}
 
+{% if paginator.page == 1 %}
+<section class="home-intro" aria-labelledby="home-title">
+  <p class="home-eyebrow">{% if lang == 'fr' %}LE CARNET DE STEPAN{% else %}STEPAN'S PROJECT NOTEBOOK{% endif %}</p>
+  <h1 id="home-title">{% if lang == 'fr' %}Construire. Tester. Partager.{% else %}Build. Experiment. Share.{% endif %}</h1>
+  <p>{% if lang == 'fr' %}Robots, électronique et réalité virtuelle : mes projets, ce que j’apprends et comment les reproduire.{% else %}Robots, electronics, and virtual reality. A collection of things I build, what I learn, and how you can try them too.{% endif %}</p>
+  <a class="home-browse" href="{{ '/categories/' | relative_url }}">{% if lang == 'fr' %}Explorer les sujets{% else %}Explore by topic{% endif %} <span aria-hidden="true">→</span></a>
+</section>
+{% endif %}
+
 <div id="post-list" class="flex-grow-1 px-xl-1">
   {% for post in posts %}
     <article class="card-wrapper card">
@@ -83,7 +92,7 @@ refactor: true
 
         <div class="col-md-{{ card_body_col }}">
           <div class="card-body d-flex flex-column">
-            <h1 class="card-title my-2 mt-md-0">{{ post.title }}</h1>
+            <h2 class="card-title my-2 mt-md-0">{{ post.title }}</h2>
 
             <div class="card-text content mt-0 mb-3">
               <p>{% include post-description.html %}</p>

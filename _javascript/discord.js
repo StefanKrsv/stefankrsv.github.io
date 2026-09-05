@@ -1,0 +1,619 @@
+(function () {
+    const DISCORD_ID = '792751366698827799';
+    const container = document.getElementById('discordStatusContainer');
+    if (!container) return;
+    const fallbackContent = container.innerHTML;
+    let activityStartTime = null;
+    let activityEndTime = null;
+    let elapsedInterval = null;
+    let ws = null;
+    let lastImageUrl = null;
+    let lastBackgroundColor = null;
+    let heartbeatInterval = null;
+    function debugLog() {}
+    function getAverageColor(img, callback) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      canvas.width = 16;
+      canvas.height = 16;
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      try {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        let r = 0,
+          g = 0,
+          b = 0;
+        let pixelCount = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const alpha = data[i + 3];
+          if (alpha > 0) {
+            r += data[i];
+            g += data[i + 1];
+            b += data[i + 2];
+            pixelCount++;
+          }
+        }
+
+        if (pixelCount > 0) {
+          r = Math.floor(r / pixelCount);
+          g = Math.floor(g / pixelCount);
+          b = Math.floor(b / pixelCount);
+
+          callback({ r, g, b });
+        } else {
+          callback(null);
+        }
+      } catch (error) {
+        console.error('Error getting image data:', error);
+        callback(null);
+      }
+    }
+
+    function createDynamicBackground(color, opacity = 0.4, darken = 0.7) {
+      if (!color) return '#82838b3f';
+
+      const darkR = Math.floor(color.r * darken);
+      const darkG = Math.floor(color.g * darken);
+      const darkB = Math.floor(color.b * darken);
+
+      return `rgba(${darkR}, ${darkG}, ${darkB}, ${opacity})`;
+    }
+
+    function applyDynamicBackground(imageUrl, activityElement, onColor) {
+      if (!imageUrl || !activityElement) return;
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        getAverageColor(img, (color) => {
+          const bgColor = createDynamicBackground(color);
+          activityElement.style.setProperty('--dynamic-bg', bgColor);
+          onColor && onColor(bgColor);
+        });
+      };
+
+      img.onerror = () => {
+        activityElement.style.setProperty('--dynamic-bg', '#82838b3f');
+      };
+
+      img.src = imageUrl;
+    }
+
+    function formatTimeElapsed(milliseconds) {
+      const totalSeconds = Math.floor(Math.max(0, milliseconds) / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      } else {
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      }
+    }
+    function updateElapsedTime() {
+      if (activityStartTime) {
+        const elapsed = Date.now() - activityStartTime;
+        const timeElement = document.getElementById('activityElapsedTime');
+        if (timeElement) {
+          timeElement.textContent = formatTimeElapsed(elapsed);
+        }
+      }
+
+      if (activityEndTime && activityStartTime) {
+        const totalDuration = activityEndTime - activityStartTime;
+        const elapsedTime = Date.now() - activityStartTime;
+        const progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+
+        const progressElement = document.getElementById('activityProgress');
+        if (progressElement) {
+          progressElement.style.width = `${progressPercentage}%`;
+        }
+      }
+    }
+
+    function startElapsedTimer(startTime, endTime = null) {
+      activityStartTime = startTime;
+      activityEndTime = endTime || null;
+      if (elapsedInterval) {
+        clearInterval(elapsedInterval);
+        elapsedInterval = null;
+      }
+      updateElapsedTime();
+      elapsedInterval = setInterval(updateElapsedTime, 1000);
+    }
+
+    function stopElapsedTimer() {
+      if (elapsedInterval) {
+        clearInterval(elapsedInterval);
+        elapsedInterval = null;
+      }
+      activityStartTime = null;
+      activityEndTime = null;
+    }
+    (function () {
+      let reconnectTimeout = null;
+      let reconnectAttempts = 0;
+      const maxReconnectAttempts = 5;
+      const baseReconnectDelay = 1000;
+
+      function connectWebSocket() {
+        try {
+          ws = new WebSocket('wss://api.lanyard.rest/socket');
+
+          ws.onopen = () => {
+            debugLog('WebSocket connected successfully!');
+            reconnectAttempts = 0;
+            container?.querySelector('.discord-loading')?.remove();
+          };
+
+          ws.onmessage = (event) => {
+            try {
+              const message = JSON.parse(event.data);
+              handleWebSocketMessage(message);
+            } catch (error) {
+              debugLog(`Error parsing message: ${error.message}`);
+            }
+          };
+
+          ws.onclose = (event) => {
+            debugLog(`WebSocket disconnected: ${event.code} - ${event.reason}`);
+            cleanup();
+
+            if (reconnectAttempts < maxReconnectAttempts) {
+              const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts);
+              console.log(
+                `Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})`
+              );
+
+              reconnectTimeout = setTimeout(() => {
+                reconnectAttempts++;
+                connectWebSocket();
+              }, delay);
+            } else {
+              showError('Discord status unavailable');
+            }
+          };
+
+          ws.onerror = (error) => {
+            console.error('Discord WebSocket error:', error);
+          };
+        } catch (error) {
+          console.error('Failed to create WebSocket connection:', error);
+          showError('Failed to connect to Discord');
+        }
+      }
+
+      function handleWebSocketMessage(message) {
+        debugLog(`Received message: op=${message.op}, t=${message.t || 'N/A'}`, message);
+
+        switch (message.op) {
+          case 1: {
+            debugLog(`HELLO received with heartbeat: ${message.d.heartbeat_interval}ms`);
+            const heartbeatMs = message.d.heartbeat_interval;
+            startHeartbeat(heartbeatMs);
+            const initMessage = {
+              op: 2,
+              d: {
+                subscribe_to_id: DISCORD_ID
+              }
+            };
+            debugLog(`Sending INITIALIZE for user: ${DISCORD_ID}`);
+            ws.send(JSON.stringify(initMessage));
+            break;
+          }
+
+          case 0:
+            debugLog(`EVENT received: ${message.t}`);
+            handleEvent(message);
+            break;
+
+          default:
+            debugLog(`Unknown opcode: ${message.op}`);
+        }
+      }
+
+      function handleEvent(message) {
+        debugLog(`Handling event: ${message.t}`, message.d);
+
+        switch (message.t) {
+          case 'INIT_STATE':
+            debugLog('INIT_STATE - updating status');
+            if (message.d) {
+              debugLog(
+                `User: ${message.d.discord_user?.username}, Status: ${message.d.discord_status}, Activities: ${
+                  message.d.activities?.length || 0
+                }`
+              );
+              updateDiscordStatus(message.d);
+            }
+            break;
+
+          case 'PRESENCE_UPDATE':
+            debugLog('PRESENCE_UPDATE - updating status');
+            if (message.d) {
+              debugLog(`Updated status: ${message.d.discord_status}, Activities: ${message.d.activities?.length || 0}`);
+              updateDiscordStatus(message.d);
+            }
+            break;
+
+          default:
+            debugLog(`Unknown event type: ${message.t}`);
+        }
+      }
+
+      function startHeartbeat(interval) {
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+        }
+
+        heartbeatInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ op: 3 }));
+
+          }
+        }, interval);
+      }
+
+      function cleanup() {
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+          heartbeatInterval = null;
+        }
+
+        if (reconnectTimeout) {
+          clearTimeout(reconnectTimeout);
+          reconnectTimeout = null;
+        }
+
+        stopElapsedTimer();
+      }
+
+      connectWebSocket();
+
+      window.addEventListener('beforeunload', () => {
+        cleanup();
+        if (ws) {
+          ws.close();
+        }
+      });
+    })();
+    function updateUserInfo(data, statusClasses, statusTexts) {
+      const avatar = container.querySelector('.discord-avatar');
+      const statusBadge = container.querySelector('.discord-status-badge');
+      const username = container.querySelector('.discord-username');
+      const statusText = container.querySelector('.discord-status-text');
+      const avatarWrapper = container.querySelector('.discord-avatar-wrapper');
+
+      if (!avatar || !statusBadge || !username || !statusText || !avatarWrapper) return;
+
+      const avatarUrl = `https://cdn.discordapp.com/avatars/${data.discord_user.id}/${data.discord_user.avatar}.jpg?size=256`;
+      if (avatar.src !== avatarUrl) {
+        avatar.src = avatarUrl;
+      }
+
+      if (username.textContent !== data.discord_user.username) {
+        username.textContent = data.discord_user.username;
+      }
+
+      const newStatusClass = statusClasses[data.discord_status] || 'status-offline';
+      if (!statusBadge.classList.contains(newStatusClass)) {
+        statusBadge.className = `discord-status-badge ${newStatusClass}`;
+      }
+
+      const newStatusText = statusTexts[data.discord_status] || 'Unknown';
+      if (statusText.textContent !== newStatusText) {
+        statusText.textContent = newStatusText;
+      }
+
+      const newHref = `https://discord.com/users/${DISCORD_ID}`;
+      if (avatarWrapper.href !== newHref) {
+        avatarWrapper.href = newHref;
+      }
+    }
+    function updateActivitySection(data) {
+      const activityContainer = container.querySelector('.discord-activity-container');
+      if (!activityContainer) return;
+
+      const activity = data.activities?.[0];
+      let imageUrl = null;
+      let hasActivityWithTime = false;
+      let activityType = null;
+
+      if (data.listening_to_spotify && data.spotify) {
+        activityType = 'spotify';
+        imageUrl = data.spotify.album_art_url;
+        hasActivityWithTime = true;
+        startElapsedTimer(data.spotify.timestamps?.start, data.spotify.timestamps?.end);
+      } else if (activity?.type === 2) {
+        activityType = 'listening';
+        imageUrl = getActivityImageUrl(activity);
+        hasActivityWithTime = true;
+        startElapsedTimer(activity.timestamps?.start, activity.timestamps?.end);
+      } else if (activity && activity.name !== 'Spotify') {
+        activityType = 'game';
+        imageUrl = getActivityImageUrl(activity);
+        hasActivityWithTime = true;
+        startElapsedTimer(activity.timestamps?.start || activity.created_at);
+      }
+
+      const generateActivityContent = (bgColor = '#82838b3f') => {
+        const activityData = activityType === 'spotify' ? data.spotify : activity;
+
+        switch (activityType) {
+          case 'spotify':
+            return generateSpotifyActivity(activityData, bgColor);
+          case 'game':
+            return generateGameActivity(activityData, imageUrl, bgColor);
+          case 'listening':
+            return generateListeningActivity(activityData, imageUrl, bgColor);
+          default:
+            return '';
+        }
+      };
+
+      const imageChanged = imageUrl !== lastImageUrl;
+
+      if (imageChanged) {
+        lastImageUrl = imageUrl;
+        activityContainer.innerHTML = generateActivityContent();
+
+        if (imageUrl) {
+          applyDynamicBackground(imageUrl, container.querySelector('.discord-activity'), (bgColor) => {
+            if (lastImageUrl !== imageUrl) return;
+            lastBackgroundColor = bgColor;
+            activityContainer.innerHTML = generateActivityContent(bgColor);
+          });
+        }
+      } else if (lastBackgroundColor && activityType && imageUrl) {
+        activityContainer.innerHTML = generateActivityContent(lastBackgroundColor);
+      } else {
+        activityContainer.innerHTML = generateActivityContent('#82838b3f');
+      }
+
+      if (!hasActivityWithTime) {
+        stopElapsedTimer();
+      }
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;'
+      })[character]);
+    }
+
+    function safeUrl(value) {
+      try {
+        const url = new URL(value);
+        return url.protocol === 'https:' ? escapeHtml(url.href) : '#';
+      } catch { return '#'; }
+    }
+
+    function generateSpotifyActivity(spotify, color) {
+      let progressPercentage = 0;
+      let elapsedTime = 0;
+
+      if (spotify.timestamps?.start && spotify.timestamps?.end) {
+        const totalDuration = spotify.timestamps.end - spotify.timestamps.start;
+        elapsedTime = Date.now() - spotify.timestamps.start;
+        progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+      }
+
+      const trackUrl = `https://open.spotify.com/track/${encodeURIComponent(spotify.track_id || '')}`;
+      const createSpotifyLink = (content) =>
+        `<a href="${trackUrl}" target="_blank" rel="noopener noreferrer" class="spotify-link">${content}</a>`;
+
+      const timeContainer =
+        spotify.timestamps?.start && spotify.timestamps?.end
+          ? `
+      <div class="music-container">
+        <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(elapsedTime)}</div>
+        <div class="bar"><div class="progress" id="activityProgress" style="width: ${progressPercentage}%;"></div></div>
+        <div class="music-time">${formatTimeElapsed(spotify.timestamps.end - spotify.timestamps.start)}</div>
+      </div>`
+          : '';
+
+      return `<div class="discord-activity" id="discordActivity" style="background: ${color}; border: 1px solid color-mix(in srgb, ${color} 85%, #cccccc 15%);">
+    <div class="game-activity">
+      <div class="game-name">Listening to Spotify</div>
+      <div class="game-body">
+        ${createSpotifyLink(`<img src="${safeUrl(spotify.album_art_url)}" alt="Album" class="spotify-album-mini">`)}
+        <div class="game-details">
+          ${createSpotifyLink(`<div class="spotify-song">♪ ${escapeHtml(spotify.song)}</div>`)}
+          <div class="spotify-artist">by ${escapeHtml(spotify.artist)}</div>
+          ${timeContainer}
+        </div>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function generateListeningActivity(activity, imageUrl, color) {
+      let progressPercentage = 0;
+      let elapsedTime = 0;
+
+      if (activity.timestamps?.start && activity.timestamps?.end) {
+        const totalDuration = activity.timestamps.end - activity.timestamps.start;
+        elapsedTime = Date.now() - activity.timestamps.start;
+        progressPercentage = Math.max(0, Math.min(100, (elapsedTime / totalDuration) * 100));
+      }
+      const fallbackIcon =
+        'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KUGF0aCBkPSJNMjEgMTJWN0gxOVY1SDE3VjdIMTVWOUgxN1YxMUgxOVYxMkgyMVpNMTAgMTJIOFYxMEg2VjEySERWMTRINlYxMkg4VjE0SDEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo=';
+      const isYouTubeMusic = activity.name === 'YouTube Music';
+
+      const albumImage = activity.details
+        ? isYouTubeMusic
+          ? `<a href="${
+              safeUrl(activity.details_url)
+            }" target="_blank" rel="noopener noreferrer" class="spotify-link"><img src="${safeUrl(imageUrl)}" alt="Album" class="spotify-album-mini" onerror="this.src='${fallbackIcon}'"></a>`
+          : `<img src="${safeUrl(imageUrl)}" alt="Game Icon" class="game-icon" onerror="this.src='${fallbackIcon}'">`
+        : '';
+
+      const title = activity.details
+        ? `<a
+          href="${safeUrl(activity.details_url)}"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="spotify-link"
+        >
+          <div class="music-title">${escapeHtml(activity.details)}</div>
+        </a>`
+        : '';
+      const artist = activity.state
+        ? `<a href="${
+            safeUrl(activity.state_url)
+          }" target="_blank" rel="noopener noreferrer" class="spotify-link"><div class="game-info">${
+            escapeHtml(activity.state)
+          }</div></a>`
+        : '';
+      const album = activity.assets?.large_text ? `<div class="game-info">${escapeHtml(activity.assets.large_text)}</div>` : '';
+
+      const timeContainer =
+        activity.timestamps?.start && activity.timestamps?.end
+          ? `
+    <div class="music-container">
+      <div class="music-time" id="activityElapsedTime">${formatTimeElapsed(elapsedTime)}</div>
+      <div class="bar"><div class="progress" id="activityProgress" style="width: ${progressPercentage}%;"></div></div>
+      <div class="music-time">${formatTimeElapsed(activity.timestamps.end - activity.timestamps.start)}</div>
+    </div>`
+          : '';
+
+      return `<div class="discord-activity" id="discordActivity" style="background: ${color}; border: 1px solid color-mix(in srgb, ${color} 85%, #cccccc 15%);">
+    <div class="game-activity">
+      <div class="game-name">Listening to ${escapeHtml(activity.name)}</div>
+      <div class="game-body">
+        <div class="game-body">${albumImage}</div>
+        <div class="game-details">
+          <div class="music-title">${title}</div>
+          <div class="game-info">${artist}</div>
+          ${album}
+          ${timeContainer}
+        </div>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function generateGameActivity(activity, imageUrl, color) {
+      const gameIconHtml = getGameIconHtml(activity, imageUrl);
+
+      const gamepadIcon = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24">
+    <path fill="#579a5b" fill-rule="evenodd" d="M20.97 4.06c0 .18.08.35.24.43.55.28.9.82 1.04 1.42.3 1.24.75 3.7.75 7.09v4.91a3.09 3.09 0 0 1-5.85 1.38l-1.76-3.51a1.09 1.09 0 0 0-1.23-.55c-.57.13-1.36.27-2.16.27s-1.6-.14-2.16-.27c-.49-.11-1 .1-1.23.55l-1.76 3.51A3.09 3.09 0 0 1 1 17.91V13c0-3.38.46-5.85.75-7.1.15-.6.49-1.13 1.04-1.4a.47.47 0 0 0 .24-.44c0-.7.48-1.32 1.2-1.47l2.93-.62c.5-.1 1 .06 1.36.4.35.34.78.71 1.28.68a42.4 42.4 0 0 1 4.4 0c.5.03.93-.34 1.28-.69.35-.33.86-.5 1.36-.39l2.94.62c.7.15 1.19.78 1.19 1.47ZM20 7.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM15.5 12a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM5 7a1 1 0 0 1 2 0v1h1a1 1 0 0 1 0 2H7v1a1 1 0 1 1-2 0v-1H4a1 1 0 1 1 0-2h1V7Z" clip-rule="evenodd" />
+  </svg>`;
+
+      const userIcon = `<svg aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24">
+    <path fill="#82838b" d="M14.5 8a3 3 0 1 0-2.7-4.3c-.2.4.06.86.44 1.12a5 5 0 0 1 2.14 3.08c.01.06.06.1.12.1ZM18.44 17.27c.15.43.54.73 1 .73h1.06c.83 0 1.5-.67 1.5-1.5a7.5 7.5 0 0 0-6.5-7.43c-.55-.08-.99.38-1.1.92-.06.3-.15.6-.26.87-.23.58-.05 1.3.47 1.63a9.53 9.53 0 0 1 3.83 4.78ZM12.5 9a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2 20.5a7.5 7.5 0 0 1 15 0c0 .83-.67 1.5-1.5 1.5a.2.2 0 0 1-.2-.16c-.2-.96-.56-1.87-.88-2.54-.1-.23-.42-.15-.42.1v2.1a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2.1c0-.25-.31-.33-.42-.1-.32.67-.67 1.58-.88 2.54a.2.2 0 0 1-.2.16A1.5 1.5 0 0 1 2 20.5Z" />
+  </svg>`;
+
+      const getStateContent = () => {
+        if (!activity.state) return '';
+
+        if (activity.party?.size) {
+          return `${userIcon}<div class="game-state">${escapeHtml(activity.state)} (${escapeHtml(activity.party.size[0])})</div>`;
+        }
+        return `<div class="game-state">&nbsp;${escapeHtml(activity.state)}</div>`;
+      };
+
+      return `<div class="discord-activity" id="discordActivity" style="background: ${color}; border: 1px solid color-mix(in srgb, ${color} 85%, #cccccc 15%);">
+    <div class="game-activity">
+      <div class="game-name">Playing</div>
+      <div class="game-body">
+        ${gameIconHtml}
+        <div class="game-details">
+          <div class="music-title">${escapeHtml(activity.name)}</div>
+          ${activity.details ? `<div class="game-info">${escapeHtml(activity.details)}</div>` : ''}
+          <div class="game-info" id="listeningAlbum">${escapeHtml(activity.assets?.large_text)}</div>
+          <div class="game-container">
+            ${gamepadIcon}
+            <div class="game-time" id="activityElapsedTime">${
+              activity.timestamps?.start ? formatTimeElapsed(Date.now() - activity.timestamps.start) : '0:00'
+            }</div>
+            ${getStateContent()}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+    }
+
+    function getActivityImageUrl(activity) {
+      if (activity.assets?.large_image?.startsWith('mp:external')) {
+        return `https://media.discordapp.net/${activity.assets.large_image.replace('mp:', '')}`;
+      }
+      if (
+        activity.application_id &&
+        activity.assets?.large_image &&
+        activity.application_id != activity.assets?.large_image
+      ) {
+        return `https://cdn.discordapp.com/app-assets/${activity.application_id}/${activity.assets.large_image}.png?size=64`;
+      }
+      if (activity.application_id) {
+        return `https://dcdn.dstn.to/app-icons/${activity.application_id}?size=64`;
+      }
+
+      return null;
+    }
+
+    function getGameIconHtml(activity, imageUrl) {
+      if (imageUrl) {
+        return `<img src="${safeUrl(imageUrl)}" alt="Game Icon" class="game-icon" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTIxIDEyVjdIMTlWNUgxN1Y3SDE1VjlIMTdWMTFIMTlWMTJIMjFaTTEwIDEySDhWMTBINlYxMkg0VjE0SDZWMTJIOFYXNEGMTEW5WjEwWjEyWk0xOSAySDVDMy44OSAyIDMgMi44OSAzIDRWMThDMyAxNy4xIDMuOSAxOCA1IDE4SDE5QzIwLjEgMTggMjEgMTcuMSAyMSAxNlY0QzIxIDIuODkgMjAuMSAyIDE5IDJaIiBmaWxsPSIjNzQ3Rjg2Ci8+Cjwvc3ZnPgo='">`;
+      }
+
+      return `<div class="game-icon"><svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="2 2 20 20" fill="none">
+        <path fill="currentColor" fill-rule="evenodd" d="M5 2a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V5a3 3 0 0 0-3-3H5Zm6.81 7c-.54 0-1 .26-1.23.61A1 1 0 0 1 8.92 8.5 3.49 3.49 0 0 1 11.82 7c1.81 0 3.43 1.38 3.43 3.25 0 1.45-.98 2.61-2.27 3.06a1 1 0 0 1-1.96.37l-.19-1a1 1 0 0 1 .98-1.18c.87 0 1.44-.63 1.44-1.25S12.68 9 11.81 9ZM13 16a1 1 0 1 1-2 0 1 1 0 0 1 2 0Zm7-10.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM18.5 20a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM7 18.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0ZM5.5 7a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" clip-rule="evenodd"/>
+      </svg></div>`;
+    }
+    function initializeDiscordWidget() {
+      if (container.querySelector('.discord-top-section')) {
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="discord-top-section">
+          <a href="https://discord.com/users/${DISCORD_ID}" target="_blank" rel="noopener noreferrer" class="discord-avatar-wrapper">
+            <img alt="Discord Avatar" width="112" height="112" class="discord-avatar" onerror="this.style.display='none'">
+            <div class="discord-status-badge status-offline"></div>
+          </a>
+          <div class="discord-text-info">
+            <div class="discord-username"></div>
+            <div class="discord-status-text">Offline</div>
+          </div>
+        </div>
+        <div class="discord-activity-container"></div>`;
+    }
+    function updateDiscordStatus(data) {
+      debugLog(`Updating status for: ${data.discord_user?.username}`, {
+        status: data.discord_status,
+        spotify: data.listening_to_spotify,
+        activities: data.activities?.map((a) => ({ name: a.name, type: a.type }))
+      });
+
+      initializeDiscordWidget();
+
+      const statusClasses = {
+        online: 'status-online',
+        idle: 'status-idle',
+        dnd: 'status-dnd',
+        offline: 'status-offline'
+      };
+
+      const statusTexts = {
+        online: 'Online',
+        idle: 'Away',
+        dnd: 'Do Not Disturb',
+        offline: 'Offline'
+      };
+
+      updateUserInfo(data, statusClasses, statusTexts);
+      updateActivitySection(data);
+    }
+    function showError() {
+      container.innerHTML = fallbackContent;
+    }
+  })();

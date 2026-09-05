@@ -171,3 +171,69 @@
     }
   }
 }
+
+.home-intro {
+  margin-top: 2.5rem;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid var(--main-border-color);
+  border-radius: 1rem;
+  background: linear-gradient(130deg, rgb(86 156 214 / 10%), transparent 75%);
+
+  .home-eyebrow {
+    margin-bottom: 0.85rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    color: var(--text-muted-color);
+  }
+
+  h1 {
+    margin: 0 0 1rem;
+    font-size: clamp(1.8rem, 4vw, 2.7rem);
+    line-height: 1.15;
+    letter-spacing: -0.04em;
+  }
+
+  > p:not(.home-eyebrow) {
+    max-width: 38rem;
+    line-height: 1.7;
+    color: var(--text-muted-color);
+  }
+
+  .home-browse {
+    display: inline-block;
+    padding-block: 0.5rem;
+    font-weight: 600;
+  }
+}
+
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 1100;
+  padding: 0.75rem 1rem;
+  background: var(--main-bg);
+  border: 2px solid var(--link-color);
+  border-radius: 0.5rem;
+  transform: translateY(-200%);
+
+  &:focus {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

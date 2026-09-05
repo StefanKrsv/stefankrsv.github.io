@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta
     name="viewport"
-    content="width=device-width, user-scalable=no initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
 
   {%- capture seo_tags -%}
@@ -58,7 +58,10 @@
     {% assign seo_tags = seo_tags | replace: old_meta_clip, new_meta_clip %}
   {% endif %}
 
-  {{ seo_tags }}
+  {% capture localized_page_url %}{{ site.url }}{{ site.baseurl }}{% if site.active_lang != site.default_lang %}/{{ site.active_lang }}{% endif %}{{ page.url }}{% endcapture %}
+  {% capture original_og_url %}property="og:url" content="{{ page.url | absolute_url }}"{% endcapture %}
+  {% capture localized_og_url %}property="og:url" content="{{ localized_page_url }}"{% endcapture %}
+  {{ seo_tags | replace: original_og_url, localized_og_url }}
 
   <title>
     {%- unless page.layout == 'home' -%}
@@ -84,6 +87,8 @@
   {% endunless %}
 
   <!-- Theme style -->
+  <link rel="stylesheet" href="{{ '/assets/css/sidebar-widget.css' | relative_url }}">
+  <link rel="stylesheet" href="{{ '/assets/css/lang-selector.css' | relative_url }}">
   <link rel="stylesheet" href="{{ '/assets/css/:THEME.css' | replace: ':THEME', site.theme | relative_url }}">
 
   <!-- Web Font -->

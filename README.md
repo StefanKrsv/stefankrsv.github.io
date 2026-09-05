@@ -1,28 +1,44 @@
-<!-- markdownlint-disable-next-line -->
+# stepan.be
 
-[![Deploy to Pages](https://github.com/StefanKrsv/stefankrsv.github.io/actions/workflows/jekyll.yml/badge.svg)](https://github.com/StefanKrsv/stefankrsv.github.io/actions/workflows/jekyll.yml)
+Personal project notebook about robotics, electronics, and virtual reality, built with Jekyll and Chirpy. English and French posts, with optional live Discord presence.
 
-# My Personal Blog
+## Local environment
 
-Welcome to my personal blog! This is a Jekyll-powered site where I share thoughts, tutorials, and projects.
+Use Ruby 3.2, Bundler 2.5.23, and Node 22 or newer. On Windows, use Ubuntu/WSL for Ruby, with ruby-full, build-essential, and zlib1g-dev installed. Node commands can run from Windows in the same checkout.
 
-## Features
+```sh
+gem install bundler -v 2.5.23
+bundle config set --local path vendor/bundle
+bundle install
+npm ci
+npm run build
+bundle exec jekyll serve --host 127.0.0.1
+```
 
-- **Discord RPC Integration**: Show your blog activity on Discord.
+Open http://localhost:4000; French pages are under /fr/. If Bundler was installed with --user-install, add its printed executable directory to PATH. Rebuild JavaScript after editing _javascript; Jekyll handles template and SCSS changes.
 
+## Validation
 
-## Quick Start
+```sh
+npm test
+npm run build
+JEKYLL_ENV=production bundle exec jekyll build
+bundle exec ruby tools/verify-site.rb
+bundle exec htmlproofer _site --disable-external
+```
 
-1. Clone the repo: `git clone https://github.com/StefanKrsv/stefankrsv.github.io.git`
-2. Install dependencies: `bundle install`
-3. Serve locally: `bundle exec jekyll serve`
-4. Open in browser: `$BROWSER http://localhost:4000`
+The verification script checks both homepages, project routes, search indexes, image priority, and accessibility basics. Lockfiles make dependency installs reproducible. Pushes to master are built, linted, verified, and deployed by GitHub Pages.
 
-## Contributing
+## Content and customization
 
-Feel free to open issues or PRs! Let's build something awesome together.
+- English projects: _posts/; French translations: _posts/fr/, with matching filenames.
+- Homepage: _layouts/home.html and _sass/pages/_home.scss.
+- Discord widget: _javascript/discord.js and assets/css/sidebar-widget.css.
+- Language selector: _includes/lang-selector.html. Explicit URLs determine language; switching preserves query parameters and fragments.
+- Site identity and integrations: _config.yml.
+
+Future-dated posts remain unpublished until their dates. The custom domain is configured in CNAME.
 
 ## License
 
-This project is open-source under the MIT License.
-
+MIT. See LICENSE for the original theme attribution.
