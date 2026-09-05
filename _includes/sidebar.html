@@ -4,10 +4,21 @@
 <aside aria-label="Sidebar" id="sidebar" class="d-flex flex-column align-items-end">
   <header class="profile-wrapper">
     <!-- Discord Status Widget -->
-    <div class="discord-status-container" id="discordStatusContainer">
-      <a class="discord-username" href="{{ '/' | relative_url }}">{{ site.title }}</a>
-      <p class="discord-status-text">{% if lang == 'fr' %}Robotique, électronique et expérimentations.{% else %}Robotics, electronics, and experiments.{% endif %}</p>
+    <div class="discord-status-container" id="discordStatusContainer" aria-busy="true">
+      <div class="discord-placeholder" role="status">
+        <span class="visually-hidden">{% if lang == 'fr' %}Chargement du profil Discord{% else %}Loading Discord profile{% endif %}</span>
+        <div class="discord-top-section" aria-hidden="true">
+          <div class="discord-avatar-wrapper discord-skeleton-avatar">
+            <div class="discord-status-badge discord-skeleton-badge"></div>
+          </div>
+          <div class="discord-text-info">
+            <span class="discord-skeleton-line"></span>
+            <span class="discord-skeleton-line discord-skeleton-short"></span>
+          </div>
+        </div>
+      </div>
     </div>
+    <script src="{{ '/assets/js/dist/discord.min.js' | relative_url }}"></script>
 
     <p class="site-subtitle fst-italic mb-0">{{ site.tagline }}</p>
   </header>

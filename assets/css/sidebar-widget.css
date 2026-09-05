@@ -22,6 +22,36 @@
     display: inline-block;
     min-width: max-content;
     flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--main-border-color, #343438);
+  }
+  .discord-skeleton-avatar {
+    width: 112px;
+    height: 112px;
+  }
+  .discord-placeholder > .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .discord-skeleton-badge {
+    background: var(--text-muted-color, #82838b);
+  }
+  .discord-skeleton-line {
+    display: block;
+    width: 92px;
+    height: 14px;
+    margin: 5px 0;
+    border-radius: 4px;
+    background: var(--main-border-color, #343438);
+  }
+  .discord-skeleton-short {
+    width: 48px;
+    height: 10px;
   }
   .discord-avatar {
     width: 112px;

@@ -2,7 +2,10 @@
     const DISCORD_ID = '792751366698827799';
     const container = document.getElementById('discordStatusContainer');
     if (!container) return;
-    const fallbackContent = container.innerHTML;
+    const CACHE_KEY = 'discord-presence-v1';
+    const CACHE_MAX_AGE = 5 * 60 * 1000;
+    let lastPresence = null;
+    let presenceUpdatedAt = 0;
     let activityStartTime = null;
     let activityEndTime = null;
     let elapsedInterval = null;
@@ -10,6 +13,37 @@
     let lastImageUrl = null;
     let lastBackgroundColor = null;
     let heartbeatInterval = null;
+    function savePresence() {
+      if (!lastPresence) return;
+      try {
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+          data: lastPresence,
+          updatedAt: presenceUpdatedAt,
+          imageUrl: lastImageUrl,
+          backgroundColor: lastBackgroundColor
+        }));
+      } catch { /* Storage may be unavailable; live presence still works. */ }
+    }
+
+    function restorePresence() {
+      try {
+        const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY));
+        const age = Date.now() - cached?.updatedAt;
+        if (!cached || !Number.isFinite(age) || age < 0 || age > CACHE_MAX_AGE) return;
+        if (!validPresence(cached.data)) return;
+        lastImageUrl = typeof cached.imageUrl === 'string' ? cached.imageUrl : null;
+        lastBackgroundColor = /^rgba?\([\d.,\s]+\)$/.test(cached.backgroundColor)
+          ? cached.backgroundColor : null;
+        presenceUpdatedAt = cached.updatedAt;
+        updateDiscordStatus(cached.data, false);
+      } catch { /* Ignore corrupt or inaccessible cache entries. */ }
+    }
+
+    function validPresence(data) {
+      return data?.discord_user?.id === DISCORD_ID
+        && typeof data.discord_user.username === 'string'
+        && Array.isArray(data.activities);
+    }
     function debugLog() {}
     function getAverageColor(img, callback) {
       const canvas = document.createElement('canvas');
@@ -137,6 +171,8 @@
       activityStartTime = null;
       activityEndTime = null;
     }
+    // Restore before starting network work, while the sidebar is being parsed.
+    restorePresence();
     (function () {
       let reconnectTimeout = null;
       let reconnectAttempts = 0;
@@ -362,6 +398,7 @@
 
       if (imageChanged) {
         lastImageUrl = imageUrl;
+        lastBackgroundColor = null;
         activityContainer.innerHTML = generateActivityContent();
 
         if (imageUrl) {
@@ -369,6 +406,8 @@
             if (lastImageUrl !== imageUrl) return;
             lastBackgroundColor = bgColor;
             activityContainer.innerHTML = generateActivityContent(bgColor);
+            updateElapsedTime();
+            savePresence();
           });
         }
       } else if (lastBackgroundColor && activityType && imageUrl) {
@@ -380,6 +419,7 @@
       if (!hasActivityWithTime) {
         stopElapsedTimer();
       }
+      updateElapsedTime();
     }
 
     function escapeHtml(value) {
@@ -570,14 +610,14 @@
       </svg></div>`;
     }
     function initializeDiscordWidget() {
-      if (container.querySelector('.discord-top-section')) {
+      if (container.querySelector('.discord-avatar')) {
         return;
       }
 
       container.innerHTML = `
         <div class="discord-top-section">
           <a href="https://discord.com/users/${DISCORD_ID}" target="_blank" rel="noopener noreferrer" class="discord-avatar-wrapper">
-            <img alt="Discord Avatar" width="112" height="112" class="discord-avatar" onerror="this.style.display='none'">
+            <img alt="Discord Avatar" width="112" height="112" class="discord-avatar" onload="this.style.opacity=''" onerror="this.style.opacity='0'">
             <div class="discord-status-badge status-offline"></div>
           </a>
           <div class="discord-text-info">
@@ -587,7 +627,15 @@
         </div>
         <div class="discord-activity-container"></div>`;
     }
-    function updateDiscordStatus(data) {
+    function updateDiscordStatus(data, persist = true) {
+      if (!validPresence(data)) return;
+      if (persist && lastPresence && JSON.stringify(lastPresence) === JSON.stringify(data)) {
+        presenceUpdatedAt = Date.now();
+        savePresence();
+        return;
+      }
+      lastPresence = data;
+      if (persist) presenceUpdatedAt = Date.now();
       debugLog(`Updating status for: ${data.discord_user?.username}`, {
         status: data.discord_status,
         spotify: data.listening_to_spotify,
@@ -612,8 +660,15 @@
 
       updateUserInfo(data, statusClasses, statusTexts);
       updateActivitySection(data);
+      container.setAttribute('aria-busy', 'false');
+      if (persist) savePresence();
     }
     function showError() {
-      container.innerHTML = fallbackContent;
+      // A reconnect failure must not erase the profile already on screen.
+      if (lastPresence) return;
+      container.setAttribute('aria-busy', 'false');
+      const label = container.querySelector('[role="status"] .visually-hidden');
+      if (label) label.textContent = document.documentElement.lang === 'fr'
+        ? 'Profil Discord indisponible' : 'Discord profile unavailable';
     }
   })();
