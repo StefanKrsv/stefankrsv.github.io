@@ -34,6 +34,20 @@ function insertFrontmatter() {
   };
 }
 
+function inlineDiscord() {
+  return {
+    name: 'inline-discord',
+    writeBundle(_, bundle) {
+      const chunk = Object.values(bundle).find((entry) => entry.type === 'chunk');
+      const code = chunk.code.replace(/<\/script/gi, '<\\/script');
+      fs.writeFileSync(
+        '_includes/discord-script.html',
+        `<script data-discord-widget>\n{% raw %}\n${code}\n{% endraw %}\n</script>\n`
+      );
+    }
+  };
+}
+
 function build(
   filename,
   { src = SRC_DEFAULT, jekyll = false, outputName = null } = {}
@@ -52,7 +66,7 @@ function build(
       format: 'iife',
       ...(outputName !== null && { name: outputName }),
       banner,
-      sourcemap: !isProd && !jekyll
+      sourcemap: !isProd && !jekyll && filename !== 'discord'
     },
     ...(shouldWatch && { watch: { include: `${SRC_DEFAULT}/**/*.js` } }),
     plugins: [
@@ -65,7 +79,8 @@ function build(
         ]
       }),
       nodeResolve(),
-      isProd && terser(),
+      (isProd || filename === 'discord') && terser(),
+      filename === 'discord' && inlineDiscord(),
       jekyll && insertFrontmatter()
     ]
   };
