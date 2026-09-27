@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Glow Cube — Gem Runner</title>
+<style>
+  html, body { margin: 0; overflow: hidden; background: #060b1c; }
+  canvas { display: block; }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: absolute; top: 22px; left: 26px; z-index: 2;
+    color: #fff; pointer-events: none; user-select: none;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  #hud .label { font-size: 11px; letter-spacing: 5px; opacity: .55; }
+  #hud #score {
+    font-size: 44px; font-weight: 800; letter-spacing: 2px;
+    color: #7cf3ff; text-shadow: 0 0 20px rgba(124, 243, 255, .8);
+    display: inline-block; transition: transform .15s ease;
+  }
+  #hud #score.pop { transform: scale(1.22); }
+  #hud .hint { margin-top: 14px; font-size: 12px; letter-spacing: .5px; opacity: .5; }
+
+  /* ---------- Game-over overlay ---------- */
+  #overlay {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 40%, rgba(25,45,90,.8), rgba(5,8,20,.95) 60%);
+    color: #fff; opacity: 0; transition: opacity .45s ease;
+    pointer-events: none; font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  #overlay.show { opacity: 1; pointer-events: auto; }
+  #overlay h1 {
+    margin: 0 0 8px; font-size: 58px; letter-spacing: 8px; font-weight: 800;
+    color: #ffb15d; text-shadow: 0 0 34px rgba(255, 90, 40, .55);
+  }
+  #overlay .final { font-size: 24px; opacity: .9; letter-spacing: 2px; }
+  #overlay .hint { margin-top: 26px; font-size: 16px; opacity: .65; }
+  #overlay .hint b { color: #7cf3ff; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="label">SCORE</div>
+  <div id="score">0</div>
+  <div class="hint">WASD / arrow keys to move &nbsp;·&nbsp; collect the gems &nbsp;·&nbsp; dodge the red blocks &nbsp;·&nbsp; R restarts</div>
+</div>
+
+<div id="overlay">
+  <h1>GAME OVER</h1>
+  <div class="final" id="finalScore">Score: 0</div>
+  <div class="hint">Press <b>R</b> to restart</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+/* ==========================================================================
+   GLOW CUBE — a small 3D gem-collecting game
+   Three.js (r128, CDN), no build step. Save as .html and open in a browser.
+   ========================================================================== */
+
+/* ----------------------------- Tuning values ---------------------------- */
+const PLATFORM_RADIUS = 7;    // radius of the floating platform
+const CLAMP_RADIUS    = 6.3;  // max distance of the player from the center
+const PLAYER_ACCEL    = 60;   // acceleration, units/s^2
+const PLAYER_FRICTION = 9;    // exponential damping, 1/s
+const GEM_PICKUP      = 1.0;  // distance at which a gem is collected
+const HIT_DIST        = 1.4;  // distance at which an obstacle ends the game
+
+/* ------------------------------ Game state ------------------------------ */
+let score    = 0;
+let playing  = true;
+let gameTime = 0;             // world clock, only advances while playing
+
+// Reusable vectors (avoid per-frame allocations)
+const vCamTarget = new THREE.Vector3();
+const vCamGoal   = new THREE.Vector3();
+const vBack      = new THREE.Vector3();
+const vFwd       = new THREE.Vector3();
+const vRight     = new THREE.Vector3();
+const V_UP       = new THREE.Vector3(0, 1, 0);
+
+/* ========================= Renderer / scene / camera ==================== */
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x16234a, 35, 260);       // soft linear haze for depth
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputEncoding = THREE.sRGBEncoding;
+document.body.appendChild(renderer.domElement);
+
+const camera = new THREE.PerspectiveCamera(
+  62, window.innerWidth / window.innerHeight, 0.1, 1500);
+
+/* ------------------------------- Lights --------------------------------- */
+// Warm key light — casts the main shadows
+const keyLight = new THREE.DirectionalLight(0xfff2dc, 1.15);
+keyLight.position.set(9, 16, 10);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.camera.left = -30;  keyLight.shadow.camera.right  =  30;
+keyLight.shadow.camera.top   =  30;  keyLight.shadow.camera.bottom = -30;
+keyLight.shadow.camera.near  =   1;  keyLight.shadow.camera.far    =  60;
+keyLight.shadow.bias = -0.0008;
+scene.add(keyLight);
+
+// Ambient light so shadows never go pure black
+scene.add(new THREE.AmbientLight(0x7f9dff, 0.55));
+
+// Cool side fill for a nicer rim on the cube
+const fillLight = new THREE.DirectionalLight(0x44b8ff, 0.5);
+fillLight.position.set(-10, 8, -8);
+scene.add(fillLight);
+
+/* ------------------------------ Sky / stars ----------------------------- */
+// Gradient painted onto a giant inverted sphere
+function makeSky() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 1024;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 1024);
+  g.addColorStop(0.00, '#05081f');
+  g.addColorStop(0.50, '#0f2147');
+  g.addColorStop(0.75, '#27497a');
+  g.addColorStop(0.88, '#4f88b0');
+  g.addColorStop(1.00, '#a8d2de');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 512, 1024);
+  const tex = new THREE.CanvasTexture(c);
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(580, 48, 24),
+    new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide })
+  );
+  scene.add(sky);
+}
+makeSky();
+
+// Simple star field (points on a large sphere)
+function makeStars() {
+  const n = 1400;
+  const pos = new Float32Array(n * 3);
+  const col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const r = 420 + Math.random() * 150;
+    const t = Math.random() * Math.PI * 2;
+    const p = Math.acos(-1 + Math.random() * 2);
+    pos[i * 3]     = r * Math.sin(p) * Math.cos(t);
+    pos[i * 3 + 1] = Math.max(-150, r * Math.sin(p) * Math.sin(t));
+    pos[i * 3 + 2] = r * Math.cos(p);
+    const b = 0.35 + Math.random() * 0.65;
+    col[i * 3]     = b;
+    col[i * 3 + 1] = b * 0.95;
+    col[i * 3 + 2] = b;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(col, 3));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({
+    color: 0xffffff, vertexColors: true, size: 1.6, sizeAttenuation: true,
+    transparent: true, opacity: 0.9, depthWrite: false
+  })));
+}
+makeStars();
+
+/* =========================== Floating platform ========================== */
+const platform = new THREE.Mesh(
+  new THREE.CylinderGeometry(7, 6.2, 0.9, 64),
+  new THREE.MeshStandardMaterial({ color: 0x31486b, roughness: 0.65, metalness: 0.15 })
+);
+platform.receiveShadow = true;
+scene.add(platform);
+
+// Glowing cyan under-rim + a point light so the island looks suspended
+const rim = new THREE.Mesh(
+  new THREE.TorusGeometry(6.9, 0.18, 6, 96),
+  new THREE.MeshBasicMaterial({ color: 0x4fd8ff })
+);
+rim.rotation.x = Math.PI / 2;
+rim.position.y = -0.55;
+scene.add(rim);
+const rimLight = new THREE.PointLight(0x4fd8ff, 1.2, 14, 1);
+rimLight.position.set(0, -0.9, 0);
+scene.add(rimLight);
+
+// Decorative floating islands (purely cosmetic)
+const islands = [];
+for (let i = 0; i < 4; i++) {
+  const r = 3 + Math.random() * 2.5;
+  const a = Math.random() * Math.PI * 2;
+  const d = 22 + Math.random() * 10;
+  const y = 2 + Math.random() * 5;
+  const island = new THREE.Mesh(
+    new THREE.CylinderGeometry(r, r * 0.8, 0.45 + Math.random() * 0.4, 24),
+    new THREE.MeshStandardMaterial({ color: 0x263a5c, roughness: 0.7 })
+  );
+  island.position.set(Math.cos(a) * d, y, Math.sin(a) * d);
+  island.rotation.y = Math.random() * Math.PI;
+  island.userData = {
+    baseY:    y,
+    bobPhase: Math.random() * Math.PI * 2,
+    bobFreq:  0.3 + Math.random() * 0.4,
+    bobAmp:   0.35
+  };
+  scene.add(island);
+  islands.push(island);
+}
+
+/* ============================= Player (cube) ============================= */
+const playerBaseY = 1.0;
+const player = new THREE.Mesh(
+  new THREE.BoxGeometry(0.9, 0.9, 0.9),
+  new THREE.MeshStandardMaterial({
+    color: 0xcff4ff, emissive: 0x59e8ff, emissiveIntensity: 1.5,
+    roughness: 0.25, metalness: 0.2
+  })
+);
+player.castShadow = true;
+scene.add(player);
+
+// Soft point light that travels with the cube
+const playerLight = new THREE.PointLight(0x59e8ff, 1.0, 7, 1);
+playerLight.position.set(0, 0.6, 0);
+player.add(playerLight);
+
+// Horizontal world-space position + velocity (y is handled separately)
+const playerPos = new THREE.Vector3(0, playerBaseY, 0);
+const playerVel = new THREE.Vector3(0, 0, 0);
+
+// Soft light trail that lags behind the player
+const trail = new THREE.Mesh(
+  new THREE.BoxGeometry(0.6, 0.6, 0.6),
+  new THREE.MeshBasicMaterial({ color: 0x59e8ff, transparent: true })
+);
+trail.visible = false;
+scene.add(trail);
+
+/* =============================== Gems ==================================== */
+const gemGeo = new THREE.OctahedronGeometry(0.55, 0);
+const gemMat = new THREE.MeshStandardMaterial({
+  color: 0xb9ffd0, emissive: 0x3dff9e, emissiveIntensity: 1.7,
+  roughness: 0.2, metalness: 0.7
+});
+
+// Fixed home slots; respawns pick new random spots
+const gemSlots = [
+  new THREE.Vector3( 1.0, 1.15, -1.0),
+  new THREE.Vector3( 3.8, 1.15,  4.0),
+  new THREE.Vector3(-4.8, 1.15,  3.4),
+  new THREE.Vector3(-0.8, 1.15, -5.2),
+];
+
+const gems = gemSlots.map(p => {
+  const mesh = new THREE.Mesh(gemGeo, gemMat.clone());
+  mesh.position.copy(p);
+  mesh.castShadow = true;
+  scene.add(mesh);
+  return {
+    mesh,
+    pos:      p,
+    active:   true,
+    phase:    Math.random() * Math.PI * 2,
+    respawnIn: 0
+  };
+});
+
+function randomSpot() {
+  // A random spot: not too close to the player, not on top of another gem
+  for (let i = 0; i < 80; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = 2.5 + Math.random() * (PLATFORM_RADIUS - 1.2);
+    const p = new THREE.Vector3(Math.cos(a) * r, 1.15, Math.sin(a) * r);
+    if (p.distanceTo(playerPos) < 2.8) continue;
+    if (gems.every(g => !g.active || g.pos.distanceTo(p) >= 3.0)) return p;
+  }
+  return gemSlots[0];
+}
+
+function respawnGem(g) {
+  g.pos.copy(randomSpot());
+  g.active = true;
+  g.respawnIn = 0;
+  g.mesh.visible = true;
+}
+
+/* ============================== Obstacles ================================ */
+const obstacleGeo = new THREE.BoxGeometry(1.1, 1.1, 1.1);
+const obstacleMat = new THREE.MeshStandardMaterial({
+  color: 0xff5635, emissive: 0xff3311, emissiveIntensity: 0.85,
+  roughness: 0.4, metalness: 0.2
+});
+
+// Three moving hazards:
+//  - a ring orbit around the center
+//  - a horizontal sweeper at the +z edge
+//  - a vertical sweeper at the -x edge
+const obstacles = [
+  { kind: 'orbit',   r: 3.0, speed: 1.2, phase: 0.0 },
+  { kind: 'sweep-z', z: 4.5, xAmp: 1.6, freq: 1.1, phase: 0.5 },   // x = xAmp*sin(...)
+  { kind: 'sweep-x', x: -4.5, zAmp: 1.6, freq: 0.9, phase: 2.0 },  // z = zAmp*sin(...)
+];
+
+const obstacleMeshes = obstacles.map(o => {
+  const m = new THREE.Mesh(obstacleGeo, obstacleMat.clone());
+  m.castShadow = true;
+  m.position.set(o.x || o.r || 0, 1.0, o.z || o.zAmp || 0);
+  scene.add(m);
+  return m;
+});
+
+/* ====================== Particle bursts (collection sparkle) ============ */
+const bursts = [];
+const burstMat = new THREE.PointsMaterial({
+  size: 0.22, vertexColors: true, sizeAttenuation: true,
+  transparent: true, depthWrite: false
+});
+
+function spawnBurst(pos) {
+  const n = 16;
+  const positions = new Float32Array(n * 3);
+  const colors = new Float32Array(n * 3);
+  const vel = new Array(n);
+  for (let i = 0; i < n; i++) {
+    // random unit direction on a sphere (r128 has no Vector3.randomDirection())
+    const b = Math.acos(2 * Math.random() - 1);
+    const t = Math.random() * Math.PI * 2;
+    const d = new THREE.Vector3(
+      Math.sin(b) * Math.cos(t),
+      Math.cos(b),
+      Math.sin(b) * Math.sin(t)
+    );
+    positions[i * 3]     = pos.x + d.x * 0.1;
+    positions[i * 3 + 1] = pos.y + d.y * 0.1;
+    positions[i * 3 + 2] = pos.z + d.z * 0.1;
+    vel[i] = d.multiplyScalar(1.5 + Math.random() * 4.5);
+    const c = new THREE.Color().setHSL(0.32 + Math.random() * 0.1, 1, 0.5 + Math.random() * 0.4);
+    colors[i * 3]     = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color',    new THREE.BufferAttribute(colors, 3));
+  const mat = burstMat.clone();
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+  bursts.push({ geo, mat, pts, vel, t: 0, maxLife: 0.9 });
+}
+
+function updateBursts(dt) {
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const B = bursts[i];
+    B.t += dt;
+    const k = B.t / B.maxLife;
+    const arr = B.geo.getAttribute('position').array;
+    for (let j = 0; j < B.vel.length; j++) {
+      arr[j * 3]     += B.vel[j].x * dt;
+      arr[j * 3 + 1] += B.vel[j].y * dt;
+      arr[j * 3 + 2] += B.vel[j].z * dt;
+    }
+    B.geo.attributes.position.needsUpdate = true;
+    B.mat.opacity = Math.max(0, 1 - k * k);
+    if (k >= 1) {
+      scene.remove(B.pts);
+      B.geo.dispose();
+      B.mat.dispose();
+      bursts.splice(i, 1);
+    }
+  }
+}
+
+/* =============================== Input =================================== */
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    e.preventDefault();
+  }
+  if (e.key.toLowerCase() === 'r') restart();
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+/* ========================= HUD + overlay helpers ========================= */
+const hudScore   = document.getElementById('score');
+const finalScore = document.getElementById('finalScore');
+const overlay    = document.getElementById('overlay');
+
+function setScore(v) {
+  score = v;
+  hudScore.textContent = v;
+  hudScore.classList.add('pop');
+  setTimeout(() => hudScore.classList.remove('pop'), 160);
+}
+
+function gameOver() {
+  playing = false;
+  finalScore.textContent = 'Score: ' + score;
+  overlay.classList.add('show');
+}
+
+function restart() {
+  if (playing) return;
+  score = 0;
+  hudScore.textContent = '0';
+  playerVel.set(0, 0, 0);
+  playerPos.set(0, playerBaseY, 0);
+  gameTime = 0;
+  gemSlots.forEach((p, i) => {
+    const g = gems[i];
+    g.pos.copy(p);
+    g.active = true;
+    g.respawnIn = 0;
+    g.mesh.visible = true;
+  });
+  for (const B of bursts) {
+    scene.remove(B.pts);
+    B.geo.dispose();
+    B.mat.dispose();
+  }
+  bursts.length = 0;
+  overlay.classList.remove('show');
+  playing = true;
+}
+
+/* ============================== Main loop ================================ */
+// Smooth camera offset (the camera always chases the player from this side)
+const camOffset = new THREE.Vector3(5.5, 5.0, 9.0);
+camera.position.set(camOffset.x, playerBaseY + 1.15 + camOffset.y, camOffset.z);
+camera.lookAt(playerPos.x, playerBaseY + 1.15, playerPos.z);
+
+let lastTime = performance.now();
+
+function animate(now) {
+  requestAnimationFrame(animate);
+  let dt = (now - lastTime) / 1000;   // seconds since last frame
+  lastTime = now;
+  dt = Math.min(dt, 0.1);            // clamp huge gaps (e.g. tab in background)
+  if (playing) gameTime += dt;
+
+  // ---- Obstacles follow their paths (frozen while game over) ----
+  if (playing) {
+    obstacles.forEach((o, i) => {
+      const m = obstacleMeshes[i];
+      if (o.kind === 'orbit') {
+        const a = gameTime * o.speed + o.phase;
+        m.position.set(o.r * Math.cos(a), 1.0, o.r * Math.sin(a));
+        m.rotation.x += dt * 1.7;
+        m.rotation.y += dt * 2.2;
+      } else if (o.kind === 'sweep-z') {
+        m.position.set(o.xAmp * Math.sin(gameTime * o.freq + o.phase), 1.0, o.z);
+        m.rotation.x += dt * 2.0;
+        m.rotation.y += dt * 1.5;
+      } else { // sweep-x
+        m.position.set(o.x, 1.0, o.zAmp * Math.sin(gameTime * o.freq + o.phase));
+        m.rotation.x -= dt * 1.9;
+        m.rotation.y += dt * 1.6;
+      }
+    });
+  }
+
+  // ---- Player movement: acceleration + exponential damping ----
+  if (playing) {
+    // Camera-relative movement axes: W/S = toward/away from the camera (forward/back),
+    // A/D = screen left/right. Derived from the camera each frame, so it stays
+    // correct no matter where the camera points.
+    vFwd.subVectors(playerPos, camera.position);  // direction from camera toward player
+    vFwd.y = 0;
+    vFwd.normalize();
+    vRight.copy(vFwd).cross(V_UP);               // forward x up = screen right
+
+    let ix = 0, iz = 0;
+    if (keys['KeyW'] || keys['ArrowUp'])    ix += 1;
+    if (keys['KeyS'] || keys['ArrowDown'])  ix -= 1;
+    if (keys['KeyA'] || keys['ArrowLeft'])  iz -= 1;   // A = screen left  (-vRight)
+    if (keys['KeyD'] || keys['ArrowRight']) iz += 1;  // D = screen right (+vRight)
+    const len = Math.hypot(ix, iz);
+    if (len > 0) { ix /= len; iz /= len; }          // normalize diagonal input
+
+    // Apply the input in screen space: ix along fwd, iz along right
+    playerVel.x += (ix * vFwd.x + iz * vRight.x) * PLAYER_ACCEL * dt;
+    playerVel.z += (ix * vFwd.z + iz * vRight.z) * PLAYER_ACCEL * dt;
+    const damp = Math.exp(-PLAYER_FRICTION * dt);  // frame-rate independent friction
+    playerVel.x *= damp;
+    playerVel.z *= damp;
+
+    playerPos.x += playerVel.x * dt;
+    playerPos.z += playerVel.z * dt;
+
+    // Keep the cube on the platform (radial clamp, kill outward velocity)
+    const dist = Math.hypot(playerPos.x, playerPos.z);
+    if (dist > CLAMP_RADIUS) {
+      playerPos.x *= CLAMP_RADIUS / dist;
+      playerPos.z *= CLAMP_RADIUS / dist;
+      const rx = playerPos.x / CLAMP_RADIUS;
+      const rz = playerPos.z / CLAMP_RADIUS;
+      const vr = playerVel.x * rx + playerVel.z * rz;
+      if (vr > 0) {
+        playerVel.x -= vr * rx;
+        playerVel.z -= vr * rz;
+      }
+    }
+  }
+
+  // ---- Apply the player transform (runs every frame) ----
+  player.position.copy(playerPos);
+  player.position.y = playerBaseY + Math.sin(performance.now() * 0.004) * 0.05;
+  const speed = Math.hypot(playerVel.x, playerVel.z);
+  const targetY = speed > 0.1
+    ? Math.atan2(playerVel.x, playerVel.z) * 0.7
+    : player.rotation.y;
+  player.rotation.y += (targetY - player.rotation.y) * (1 - Math.exp(-5 * dt));
+
+  // Soft trail: a small cube that lags behind the player
+  if (playing && speed > 0.15) {
+    vBack.set(-playerVel.x, 0, -playerVel.z);
+    vBack.setLength(Math.min(Math.hypot(playerVel.x, playerVel.z) * 0.5, 0.9));
+    trail.position.copy(playerPos).add(vBack);
+    trail.visible = true;
+    trail.scale.setScalar(Math.min(Math.max(speed / 8, 0.3), 0.9));
+    trail.material.opacity = 0.4 + Math.min(speed / 12, 0.5);
+  } else {
+    trail.visible = false;
+  }
+
+  // ---- Gems: rotate, bob, collect, respawn ----
+  if (playing) {
+    gems.forEach(g => {
+      if (g.active) {
+        g.mesh.rotation.x += dt * 1.6;
+        g.mesh.rotation.y += dt * 2.4;
+        g.mesh.position.set(
+          g.pos.x,
+          g.pos.y + Math.sin(gameTime * 2.2 + g.phase) * 0.15,
+          g.pos.z
+        );
+      }
+      if (g.respawnIn > 0) {
+        g.respawnIn -= dt;
+        if (g.respawnIn <= 0) respawnGem(g);
+        return;
+      }
+      if (!g.active) return;
+      if (playerPos.distanceTo(g.pos) < GEM_PICKUP) {
+        setScore(score + 1);
+        g.active = false;
+        g.mesh.visible = false;
+        g.respawnIn = 1.4;
+        spawnBurst(g.pos);
+      }
+    });
+  }
+
+  // ---- Obstacle collision -> game over ----
+  if (playing) {
+    for (let i = 0; i < obstacles.length; i++) {
+      const m = obstacleMeshes[i];
+      const dx = playerPos.x - m.position.x;
+      const dz = playerPos.z - m.position.z;
+      if (dx * dx + dz * dz < HIT_DIST * HIT_DIST) {
+        gameOver();
+        break;
+      }
+    }
+  }
+
+  // ---- Decorative islands bob gently (world keeps a little life) ----
+  const tWorld = performance.now() * 0.001;
+  islands.forEach(is => {
+    is.position.y = is.userData.baseY +
+      Math.sin(tWorld * is.userData.bobFreq + is.userData.bobPhase) * is.userData.bobAmp;
+  });
+
+  // ---- Particles ----
+  if (playing) updateBursts(dt);
+
+  // ---- Smooth camera follow ----
+  vCamTarget.copy(playerPos);
+  vCamTarget.y = playerBaseY + 1.15;
+  vCamGoal.copy(vCamTarget).add(camOffset);
+  camera.position.lerp(vCamGoal, 1 - Math.exp(-4 * dt));
+  camera.lookAt(vCamTarget);
+
+  // Slowly rotating rim for subtle life
+  rim.rotation.z += dt * 0.25;
+
+  renderer.render(scene, camera);
+}
+
+requestAnimationFrame(animate);
+
+/* ------------------------------ Resize ---------------------------------- */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>

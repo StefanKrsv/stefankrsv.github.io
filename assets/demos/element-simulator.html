@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elemental — 2D Material Simulator</title>
+<style>
+  :root{
+    --bg:#101218; --panel:#181c26; --line:#2c3345;
+    --txt:#e8ecf5; --mut:#9aa3bc; --acc:#7aa2ff;
+    --mono:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:radial-gradient(120% 60% at 50% 0%, #1b2030, var(--bg));
+    color:var(--txt); font:14px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:16px 12px 28px;
+  }
+  h1{
+    font-size:21px; font-weight:800; letter-spacing:.5px; margin:0 0 10px;
+    display:flex; align-items:center; gap:9px;
+  }
+  h1 .dot{
+    width:11px;height:11px;border-radius:50%;
+    background:radial-gradient(circle,#ffd23a,#ff5f1f);
+    box-shadow:0 0 14px #ff7a1a;
+  }
+  .sub{color:var(--mut); margin:-7px 0 13px; font-size:12.5px; max-width:760px}
+
+  .panel{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    padding:13px 15px; width:100%; max-width:980px; margin-bottom:14px;
+  }
+  #toolbar{
+    display:flex; flex-wrap:wrap; gap:12px 14px; align-items:center;
+  }
+  .group{display:flex; align-items:center; gap:8px}
+  label{font-size:12px; color:var(--mut)}
+  input[type=range]{accent-color:var(--acc); width:108px; vertical-align:middle}
+  .val{font:600 12px var(--mono); color:#e8ecf5; min-width:36px; text-align:center}
+
+  button{
+    font:600 13px/1 inherit; color:var(--txt);
+    background:#23293b; border:1px solid #38405a; border-radius:9px;
+    padding:8px 13px; cursor:pointer; transition:background .15s, transform .08s;
+  }
+  button:hover{background:#2b3349}
+  button:active{transform:translateY(1px)}
+  button.primary{
+    background:linear-gradient(135deg,#6c7ef2,#8ea8ff);
+    border-color:transparent; color:#101022;
+  }
+  button.primary:hover{filter:brightness(1.1)}
+  button.toggled{background:#42569a; border-color:#7aa2ff}
+
+  .btnrow{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:11px;align-items:center}
+  .mat-btn{padding:7px 12px}
+  .sel{color:var(--mut);font-size:12.5px;font-weight:600}
+
+  #palette{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(115px,1fr)); gap:8px;
+  }
+  .mat{
+    display:flex; align-items:center; gap:8px; width:100%;
+    font:500 12.5px/1 inherit; color:var(--txt);
+    background:#22293b; border:1px solid #353f58; border-radius:10px;
+    padding:8px 10px; cursor:pointer; text-align:left; transition:border-color .15s, box-shadow .15s, background .15s;
+  }
+  .mat:hover{background:#28314a; border-color:#4a5675}
+  .mat.active{border-color:var(--acc); box-shadow:0 0 0 2px rgba(122,162,255,.35); background:#26304e}
+  .swatch{width:18px;height:18px;border-radius:6px; flex:none; border:1px solid rgba(255,255,255,.15)}
+
+  .hint{color:var(--mut); font-size:11.5px; text-align:center; margin-top:3px}
+  kbd{
+    font:600 10px var(--mono); background:#23293b; border:1px solid #38405a;
+    border-radius:5px; padding:2px 5px; margin:0 1px;
+  }
+
+  #stage{
+    position:relative; border-radius:12px; overflow:hidden;
+    border:1px solid #2b3348; box-shadow:0 18px 50px rgba(0,0,0,.55);
+    background:#0b0d15; margin:0 auto;
+  }
+  #canvas{
+    display:block; margin:0 auto;
+    image-rendering:pixelated; touch-action:none;
+    width:auto; height:auto;
+  }
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(150,255,150,.0)}50%{box-shadow:0 0 0 6px rgba(150,255,150,.22)}}
+  .overlay{
+    position:absolute; top:8px; right:10px; font:600 11px var(--mono);
+    color:rgba(255,255,255,.6); background:rgba(10,12,18,.55);
+    border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:5px 8px;
+    pointer-events:none; line-height:1.7; text-align:right;
+  }
+  #fps{color:#8be18b}
+  #cells{color:#9aa3bc}
+
+  .footer{
+    margin-top:16px; max-width:980px; width:100%; padding:0 6px;
+    font-size:12.5px; line-height:1.7; color:var(--mut);
+  }
+  .footer b{color:#c6cde4; font-weight:700}
+</style>
+</head>
+<body>
+
+<div style="width:100%;max-width:980px">
+  <h1><span class="dot"></span>ELEMENTAL <span style="font-weight:400;font-size:13px;color:var(--mut)">— 2D material simulator</span></h1>
+  <div class="sub">Click &amp; drag (or swipe) to paint. Water erodes sand, lava turns to stone on contact with water, acid eats metal, concrete pours while wet then hardens — everything interacts.</div>
+
+  <div class="panel">
+    <div id="toolbar">
+      <button id="rainBtn" class="btn">🌧 Rain</button>
+      <button id="pauseBtn" class="btn">⏸ Pause</button>
+      <button id="resetBtn" class="btn">✕ Reset</button>
+      <button id="demoBtn" class="btn primary">🏔 Demo scene</button>
+      <button id="soundBtn" class="btn" aria-pressed="false">🔇 Sound</button>
+      <span class="group">
+        <label>Brush</label>
+        <input id="brush" type="range" min="1" max="6" step="1" value="2">
+        <span class="val" id="brushVal">2</span>
+      </span>
+      <span class="group">
+        <label>Speed</label>
+        <input id="speed" type="range" min="1" max="4" step="1" value="2">
+        <span class="val" id="speedVal">2×</span>
+      </span>
+    </div>
+    <div class="btnrow">
+      <button id="eraserBtn" class="mat-btn">🧹 Eraser (clear brush)</button>
+      <span id="selLabel" class="sel">Selected: Water</span>
+    </div>
+  </div>
+
+  <div class="panel" style="padding:10px 12px">
+    <div id="palette"></div>
+  </div>
+
+  <div id="stage">
+    <canvas id="canvas"></canvas>
+    <div class="overlay"><div><span id="fps">0</span> fps</div><div id="cells"></div></div>
+  </div>
+
+  <div class="footer">
+    <b>How it plays</b>
+    <ul style="margin:5px 0 0 20px;padding:0;color:var(--mut);list-style:none">
+      <li style="display:inline-block;margin:0 15px 0 0"><b>Sand</b> falls &amp; piles — dig under a pile and watch it pour</li>
+      <li style="display:inline-block;margin:0 15px 0 0"><b>Water &amp; Ice</b> flow — ice is slow; fire &amp; lava melt ice</li>
+      <li style="display:inline-block;margin:0 15px 0 0"><b>Lava</b> flows slowly, becomes <b>stone</b> touching water; ignites wood</li>
+      <li style="display:inline-block;margin:0 15px 0 0"><b>Wet Concrete</b> pours, then hardens into solid <b>Concrete</b></li>
+      <li style="display:inline-block;margin:0 15px 0 0"><b>Oil</b> floats on water and catches fire; <b>Acid</b> dissolves stone &amp; metal</li>
+      <li style="display:inline-block;margin:0 15px 0 0"><b>Gas</b> rises — wall it off and trap it in a chamber</li>
+    </ul>
+  </div>
+</div>
+
+<div class="hint" style="margin-top:8px">
+  Keys: <kbd>1</kbd>–<kbd>9</kbd><kbd>0</kbd><kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd> pick material ·
+  <kbd>Space</kbd> pause · <kbd>R</kbd> reset · <kbd>D</kbd> demo scene · <kbd>G</kbd> rain
+</div>
+
+<script>
+// ------------------------------  simulation  ------------------------------
+const W=90, H=123, CELL=1, PASSES=1, HARDEN_TIME=80;
+const N=W*H;
+const state=new Uint8Array(N);   // 0..13 material ids
+const life  =new Int16Array(N);  // fire lifespan / wet-concrete age
+const rand  =new Float32Array(N); // static per-cell noise (grain texture)
+
+// Material ids
+const AIR=0, WATER=1, SAND=2, STONE=3, FIRE=4, ICE=5, WOOD=6,
+      LAV=7, WET=8, CONC=9, OIL=10, ACID=11, GAS=12, METAL=13;
+
+// How likely a fluid moves per pass (0..1)
+const FLOW={WATER:1, ACID:1, ICE:.35, LAV:.7, WET:.7, OIL:.5};
+
+function fillAll(m){ state.fill(m); life.fill(0); }
+function setCell(x,y,m){
+  if(x<0||x>=W||y<0||y>=H) return;
+  const i=y*W+x;
+  state[i]=m;
+  life[i]=(m===FIRE)?(30+(Math.random()*50|0)):0;
+}
+
+// Find the nearest orthogonal neighbor with material `mat`; returns its index or -1
+function find(mat,down,up,left,right){
+  if(down>=0 && state[down]===mat) return down;
+  if(up>=0   && state[up]===mat)   return up;
+  if(left>=0 && state[left]===mat) return left;
+  if(right>=0&& state[right]===mat) return right;
+  return -1;
+}
+
+// Move a fluid one cell: fall if empty, else try a random horizontal direction
+function fluidMove(i,s,down,up,left,right,flow){
+  if(Math.random()>=flow) return;
+  if(down>=0 && state[down]===AIR){ state[down]=s; state[i]=AIR; return; }
+  const dst=(Math.random()<0.5)?left:right;
+  if(dst>=0 && state[dst]===AIR){ state[dst]=s; state[i]=AIR; }
+}
+
+function step(){
+  for(let p=0;p<PASSES;p++){
+    for(let y=0;y<H;y++){
+      const r0=y*W;
+      const canUp=y>0, canDown=y<H-1;
+      for(let x=0;x<W;x++){
+        const i=r0+x;
+        const s=state[i];
+        if(!s) continue;
+        const down = canDown? i+W : -1;
+        const up   = canUp   ? i-W : -1;
+        const left = x>0     ? i-1 : -1;
+        const right= x<W-1   ? i+1 : -1;
+
+        switch(s){
+        case SAND:
+          if(down>=0 && state[down]===AIR){ state[down]=SAND; state[i]=AIR; }
+          else {
+            const dst=(Math.random()<0.5)?left:right;
+            if(dst>=0 && state[dst]===AIR){ state[dst]=SAND; state[i]=AIR; }
+          }
+          break;
+
+        case WATER:
+          // Water + lava = steam (gas) + stone crust
+          { const l=find(LAV,down,up,left,right);
+            if(l>=0){ state[i]=GAS; state[l]=STONE; }
+            else fluidMove(i,WATER,down,up,left,right,1); }
+          break;
+
+        case ACID:
+          // Dissolve adjacent stone & metal
+          if(down>=0 && (state[down]===STONE||state[down]===METAL)) state[down]=ACID;
+          if(up>=0   && (state[up]===STONE||state[up]===METAL))   state[up]=ACID;
+          if(left>=0 && (state[left]===STONE||state[left]===METAL)) state[left]=ACID;
+          if(right>=0&&(state[right]===STONE||state[right]===METAL))state[right]=ACID;
+          fluidMove(i,ACID,down,up,left,right,1);
+          break;
+
+        case ICE:
+          // Melt near fire or lava
+          { const f=find(FIRE,down,up,left,right);
+            const l=find(LAV,down,up,left,right);
+            if(f>=0||l>=0){ state[i]=WATER; life[i]=0; }
+            else fluidMove(i,ICE,down,up,left,right,0.35); }
+          break;
+
+        case LAV:
+          // Lava + water = stone crust + steam
+          { const w=find(WATER,down,up,left,right);
+            if(w>=0){ state[w]=GAS; state[i]=STONE; }
+            else fluidMove(i,LAV,down,up,left,right,0.7); }
+          break;
+
+        case WET:
+          // Hardens over time into solid concrete
+          life[i]++;
+          if(life[i]>=HARDEN_TIME){ state[i]=CONC; life[i]=0; }
+          else fluidMove(i,WET,down,up,left,right,0.7);
+          break;
+
+        case CONC: break;   // solid
+        case WOOD: break;   // solid (burns via fire spread)
+        case STONE:break;   // solid (dissolved by acid)
+        case METAL:break;   // solid (dissolved by acid)
+
+        case OIL:
+          // Catches fire
+          { const f=find(FIRE,down,up,left,right);
+            if(f>=0){ state[i]=FIRE; life[i]=30+(Math.random()*30|0); }
+            else fluidMove(i,OIL,down,up,left,right,0.5); }
+          break;
+
+        case FIRE:
+          life[i]--;
+          if(life[i]<=0){ state[i]=AIR; break; }
+          // Spread to wood & oil with a probability gate so it burns at a natural pace
+          const ignP=0.08;
+          if(up>=0   && (state[up]===WOOD||state[up]===OIL) && Math.random()<ignP){ state[up]=FIRE;   life[up]=30+(Math.random()*50|0); }
+          if(down>=0 && (state[down]===WOOD||state[down]===OIL) && Math.random()<ignP){ state[down]=FIRE; life[down]=30+(Math.random()*50|0); }
+          if(left>=0 && (state[left]===WOOD||state[left]===OIL) && Math.random()<ignP){ state[left]=FIRE; life[left]=30+(Math.random()*50|0); }
+          if(right>=0&&(state[right]===WOOD||state[right]===OIL) && Math.random()<ignP){ state[right]=FIRE; life[right]=30+(Math.random()*50|0); }
+          break;
+
+        case GAS:
+          // Gas rises; drifts sideways; STAYS in place when blocked.
+          // It can only vent at the very top edge (y=0) so a sealed chamber traps it.
+          if(up>=0 && state[up]===AIR){ state[up]=GAS; state[i]=AIR; }
+          else if(left>=0 && state[left]===AIR){ state[left]=GAS; state[i]=AIR; }
+          else if(right>=0 && state[right]===AIR){ state[right]=GAS; state[i]=AIR; }
+          else if(y===0 && Math.random()<0.02){ state[i]=AIR; }
+          break;
+        }
+      }
+    }
+  }
+}
+
+// ------------------------------  rendering  ------------------------------
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+canvas.width=W*CELL; canvas.height=H*CELL;
+const imgData=new ImageData(W*CELL,H*CELL);
+
+const FIRE_SHADES=[[255,225,110],[255,160,50],[235,90,25],[255,110,30]];
+const CLAMP=v=>v<0?0:(v>255?255:v);
+
+// Size the canvas so each simulation cell maps to an EXACT integer number of display
+// pixels. This avoids fractional upscaling that otherwise renders some cells as 2px,
+// some as 4px, with gaps in between.
+function sizeCanvas(){
+  const availW=Math.min(window.innerWidth*0.94, 1150);
+  const availH=Math.min(window.innerHeight*0.80, 1150);
+  let K=Math.min(Math.floor(availW/W), Math.floor(availH/H), 6);
+  if(K<1) K=1;
+  canvas.style.width=(W*K)+'px';
+  canvas.style.height=(H*K)+'px';
+}
+window.addEventListener('resize', sizeCanvas);
+
+function render(){
+  const d=imgData.data;
+  const t=frame;
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const i=y*W+x; const s=state[i];
+      const px=(y*CELL*(W*CELL) + x*CELL) << 2;
+      if(!s){ d[px]=d[px+1]=d[px+2]=d[px+3]=0; continue; }
+      let r,g,b,a;
+      switch(s){
+        case WATER:  r=30;  g=115;b=222; a=255; break;
+        case SAND:   r=196; g=152;b=92;  a=255; break;
+        case STONE:  r=88;  g=90; b=96;  a=255; break;
+        case FIRE:   { const fi=((i*13 + (t*7))&3); const sh=FIRE_SHADES[fi];
+                       r=sh[0]; g=sh[1]; b=sh[2]; a=255; } break;
+        case ICE:    r=176; g=216;b=240; a=255; break;
+        case WOOD:   r=128; g=84; b=44;  a=255; break;
+        case LAV:    r=238; g=62; b=16;  a=255; break;
+        case WET:    r=172; g=166;b=154; a=255; break;
+        case CONC:   r=120; g=118;b=112; a=255; break;
+        case OIL:    r=34;  g=36; b=44;  a=255; break;
+        case ACID:   r=72;  g=216;b=104; a=255; break;
+        case GAS:    r=220; g=226;b=235; a=70; break;
+        case METAL:  r=182; g=190;b=206; a=255; break;
+      }
+      d[px]=CLAMP(r); d[px+1]=CLAMP(g); d[px+2]=CLAMP(b); d[px+3]=a;
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+}
+
+// ------------------------------  demo scene  ------------------------------
+function demo(){
+  fillAll(AIR);
+  const p=(x,y,m)=>setCell(x,y,m);
+  // solid ground base
+  for(let y=H-1; y>=H-5; y--)
+    for(let x=0;x<W;x++) p(x,y, (y===H-1||y===H-2)?CONC:STONE);
+
+  // water lake in the centre
+  for(let x=28;x<=60;x++) for(let y=78;y<=H-6;y++) p(x,y,WATER);
+  // oil floating on the right of the lake
+  for(let x=38;x<=56;x++) for(let yy=78;yy<83;yy++) p(x,yy,OIL);
+
+  // sand mound on the left
+  for(let x=7;x<=26;x++){
+    const t=(x-7)/19, peak=Math.sin(t*Math.PI);
+    const h=Math.round(6*peak+2);
+    for(let y=H-6-h; y<=H-6; y++) p(x,y,SAND);
+  }
+
+  // metal block (visible, sticks out of ground)
+  for(let x=62;x<=66;x++) for(let y=H-7;y<=H-4;y++) p(x,y,METAL);
+
+  // two trees
+  for(let x=14;x<=18;x++) for(let y=98;y<=H-6;y++) p(x,y,WOOD);
+  for(let x=22;x<=25;x++) for(let y=102;y<=H-6;y++) p(x,y,WOOD);
+
+  // lava cone (volcano) on the right
+  for(let y=75;y<=H-6;y++){
+    const hw=Math.round((y-75)/6), c=74;
+    for(let x=Math.max(0,c-hw);x<=Math.min(W-1,c+hw);x++) p(x,y,LAV);
+  }
+
+  // ice shelf top-left
+  for(let x=7;x<=27;x++) for(let y=20;y<=28;y++) p(x,y,ICE);
+
+  // acid bowl (stone U + acid) far right
+  for(let y=100;y<=H-6;y++) p(82,y,STONE);
+  for(let y=100;y<=H-6;y++) p(87,y,STONE);
+  for(let x=83;x<=86;x++) for(let y=101;y<=H-6;y++) p(x,y,ACID);
+
+  // a few gas puffs rising from the volcano
+  p(72,73,GAS); p(74,74,GAS); p(76,73,GAS);
+}
+
+// ------------------------------  UI  ------------------------------
+const MATERIALS=[
+  {id:WATER,name:'Water'},{id:SAND,name:'Sand'},{id:STONE,name:'Stone'},{id:FIRE,name:'Fire'},
+  {id:ICE,name:'Ice'},{id:WOOD,name:'Wood'},{id:LAV,name:'Lava'},{id:WET,name:'Wet Concrete'},
+  {id:CONC,name:'Concrete'},{id:OIL,name:'Oil'},{id:ACID,name:'Acid'},{id:GAS,name:'Gas'},
+  {id:METAL,name:'Metal'}
+];
+const SWATCH={
+  WATER:'linear-gradient(180deg,#8ac3ff,#3a6fd6)', SAND:'#c49a5e', STONE:'#5a5c60',
+  FIRE:'linear-gradient(180deg,#ffd23a,#ff5f1f)', ICE:'linear-gradient(180deg,#dfeeff,#9cc4e8)',
+  WOOD:'#80562c', LAV:'linear-gradient(180deg,#ff8f3c,#ff3f1f)', WET:'#aaa698',
+  CONC:'#7a7872', OIL:'#1e2026', ACID:'linear-gradient(180deg,#b4f09f,#46b255)',
+  GAS:'linear-gradient(180deg,#f0f2f5,#c6cbd8)', METAL:'#b4bce4'
+};
+
+let selected=WATER, painting=false;
+const selLabel=document.getElementById('selLabel');
+const eraserBtn=document.getElementById('eraserBtn');
+
+const palette=document.getElementById('palette');
+MATERIALS.forEach(m=>{
+  const b=document.createElement('button');
+  b.className='mat'; b.dataset.id=m.id;
+  b.innerHTML='<span class="swatch" style="background:'+SWATCH[m.id]+'"></span>'+m.name;
+  b.onclick=()=>{ pick(m.id); };
+  palette.appendChild(b);
+});
+
+function pick(id){ selected=id; updateUI(); }
+function updateUI(){
+  document.querySelectorAll('.mat').forEach(b=>b.classList.toggle('active',+b.dataset.id===selected));
+  eraserBtn.classList.toggle('toggled', selected===AIR);
+  selLabel.textContent = selected===AIR ? 'Selected: Eraser' :
+    'Selected: '+((MATERIALS.find(m=>m.id===selected)||{}).name||'—');
+}
+
+// Toolbar
+const rainBtn=document.getElementById('rainBtn');
+const pauseBtn=document.getElementById('pauseBtn');
+const resetBtn=document.getElementById('resetBtn');
+const demoBtn=document.getElementById('demoBtn');
+const soundBtn=document.getElementById('soundBtn');
+const brushEl=document.getElementById('brush');
+const speedEl=document.getElementById('speed');
+const brushVal=document.getElementById('brushVal');
+const speedVal=document.getElementById('speedVal');
+let rainOn=false, paused=false, speed=2;
+
+rainBtn.onclick=()=>{ rainOn=!rainOn; rainBtn.classList.toggle('toggled',rainOn); rainBtn.textContent=(rainOn?'🌧 Rain ON':'🌧 Rain'); };
+pauseBtn.onclick=()=>togglePause();
+resetBtn.onclick=()=>fillAll(AIR);
+demoBtn.onclick=()=>{ demo(); paused=false; pauseBtn.classList.remove('toggled'); pauseBtn.textContent='⏸ Pause'; };
+eraserBtn.onclick=()=>pick(AIR);
+soundBtn.onclick=toggleSound;
+function togglePause(){
+  paused=!paused;
+  pauseBtn.classList.toggle('toggled',paused);
+  pauseBtn.textContent=paused?'▶ Play':'⏸ Pause';
+}
+brushEl.oninput=()=>brushVal.textContent=brushEl.value;
+speedEl.oninput=()=>{ speed=+speedEl.value; speedVal.textContent=speed+'×'; };
+
+// ------------------------------  sound (Web Audio)  ------------------------------
+let audioCtx=null, noiseBuffer=null;
+let masterGain=null, fireGain=null, waterGain=null, lavaGain=null;
+let soundOn=false;
+const SFX={
+  place:()=>blip(150,0.05,0.04),
+  drop:()=>blip(90,0.07,0.05)
+};
+function blip(f,dur,gv){
+  if(!audioCtx||!soundOn) return;
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.type='triangle';o.frequency.value=f;
+  g.gain.setValueAtTime(gv,audioCtx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+dur);
+  o.connect(g);g.connect(masterGain);
+  o.start();o.stop(audioCtx.currentTime+dur);
+}
+function initAudio(){
+  if(audioCtx) return;
+  try{
+    audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    const bufLen=audioCtx.sampleRate*2;
+    noiseBuffer=audioCtx.createBuffer(2,bufLen,audioCtx.sampleRate);
+    for(const ch of[0,1]){
+      const d=noiseBuffer.getChannelData(ch);
+      for(let i=0;i<bufLen;i++)d[i]=Math.random()*2-1;
+    }
+    const src=audioCtx.createBufferSource();
+    src.buffer=noiseBuffer;src.loop=true;src.start();
+    masterGain=audioCtx.createGain();masterGain.gain.value=0.5;
+    const mf=audioCtx.createBiquadFilter();mf.type='lowpass';mf.frequency.value=7000;
+    masterGain.connect(mf);mf.connect(audioCtx.destination);
+    const fireF=audioCtx.createBiquadFilter();fireF.type='bandpass';fireF.frequency.value=3000;fireF.Q.value=2.2;
+    fireGain=audioCtx.createGain();fireGain.gain.value=0;
+    src.connect(fireF);fireF.connect(fireGain);fireGain.connect(masterGain);
+    const watF=audioCtx.createBiquadFilter();watF.type='lowpass';watF.frequency.value=380;
+    waterGain=audioCtx.createGain();waterGain.gain.value=0;
+    src.connect(watF);watF.connect(waterGain);waterGain.connect(masterGain);
+    const lavF=audioCtx.createBiquadFilter();lavF.type='lowpass';lavF.frequency.value=110;
+    lavaGain=audioCtx.createGain();lavaGain.gain.value=0;
+    src.connect(lavF);lavF.connect(lavaGain);lavaGain.connect(masterGain);
+  }catch(e){}
+}
+function toggleSound(){
+  soundOn=!soundOn;
+  soundBtn.setAttribute('aria-pressed',String(soundOn));
+  soundBtn.textContent= soundOn?'🔊 Sound ON':'🔇 Sound';
+  soundBtn.classList.toggle('toggled',soundOn);
+  if(soundOn){
+    initAudio();
+    if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+    soundBtn.classList.add('toggled');
+  }
+}
+function updateSound(fireCount,waterCount,lavaCount){
+  if(!soundOn||!audioCtx)return;
+  const t=audioCtx.currentTime;
+  const cl=v=>Math.max(0,Math.min(1,v));
+  const setg=(g,v)=>g.gain.setTargetAtTime(v,t,0.12);
+  const crack=0.55+Math.random()*0.55; // random crackle factor
+  setg(fireGain,  0.35*cl(fireCount/1600)*crack);
+  setg(waterGain, 0.10*cl(waterCount/9000));
+  setg(lavaGain,  0.25*cl(lavaCount/1500));
+}
+
+// Keyboard
+const KEYMAP={1:WATER,2:SAND,3:STONE,4:FIRE,5:ICE,6:WOOD,7:LAV,8:WET,9:CONC,0:OIL,q:ACID,w:GAS,e:METAL};
+window.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(k===' '){ e.preventDefault(); togglePause(); return; }
+  if(k==='r'){ fillAll(AIR); return; }
+  if(k==='d'){ demo(); return; }
+  if(k==='g'){ rainBtn.click(); return; }
+  if(KEYMAP[k]!=null) pick(KEYMAP[k]);
+});
+
+// Painting (pointer + touch)
+function posFromEvent(e){
+  const r=canvas.getBoundingClientRect();
+  return {
+    x:Math.floor((e.clientX-r.left)/r.width*W),
+    y:Math.floor((e.clientY-r.top)/r.height*H)
+  };
+}
+function paintAt(cx,cy){
+  const rad=Math.max(1,+brushEl.value);
+  const mat=selected;
+  for(let dy=-rad;dy<=rad;dy++)
+    for(let dx=-rad;dx<=rad;dx++){
+      if(dx*dx+dy*dy>rad*rad) continue;
+      setCell(cx+dx,cy+dy,mat);
+    }
+}
+canvas.addEventListener('pointerdown',e=>{
+  painting=true; canvas.setPointerCapture(e.pointerId);
+  const p=posFromEvent(e); paintAt(p.x,p.y);
+  SFX.place();
+});
+canvas.addEventListener('pointermove',e=>{ if(!painting) return; const p=posFromEvent(e); paintAt(p.x,p.y); });
+window.addEventListener('pointerup',()=>painting=false);
+
+// ------------------------------  rain  ------------------------------
+function dropRain(){
+  for(let k=0;k<3;k++){
+    const x=Math.random()*W|0;
+    if(state[x]===AIR) state[x]=WATER;
+  }
+}
+
+// ------------------------------  main loop  ------------------------------
+let frame=0, fpsEma=0, last=performance.now(), lastFps=0;
+const fpsEl=document.getElementById('fps');
+const cellsEl=document.getElementById('cells');
+cellsEl.textContent=(W+'×'+H)+' cells';
+
+function updateSoundCounts(){
+  let fire=0,water=0,lava=0;
+  for(let i=0;i<N;i++){
+    const s=state[i];
+    if(s===FIRE)fire++; else if(s===WATER)water++; else if(s===LAV)lava++;
+  }
+  updateSound(fire,water,lava);
+}
+function loop(t){
+  const dt=Math.max(t-last,1); last=t;
+  fpsEma+=(1000/dt - fpsEma)*0.05;
+  if(!paused){
+    for(let k=0;k<speed;k++) step();
+    if(rainOn) dropRain();
+    frame++;
+    if((frame%30)===0) updateSoundCounts();
+  }
+  render();
+  if(t-lastFps>120){ lastFps=t; fpsEl.textContent=(fpsEma|0).toString(); }
+  requestAnimationFrame(loop);
+}
+
+// init
+for(let i=0;i<N;i++) rand[i]=Math.random();
+sizeCanvas();
+updateUI();
+demo();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

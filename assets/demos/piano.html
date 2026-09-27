@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resonant — Digital Piano</title>
+<style>
+  :root {
+    --accent: #d9a441;
+    --text: #f0e8da;
+  }
+  * { margin: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(120% 90% at 50% 0%, #2a2319 0%, #14110b 55%, #0d0b07 100%);
+    color: var(--text);
+    font-family: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+    display: flex; flex-direction: column;
+    overflow: hidden; user-select: none; -webkit-user-select: none;
+  }
+  header {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+    padding: 12px 18px;
+  }
+  .logo { font-weight: 700; font-size: 19px; letter-spacing: .06em; }
+  .logo span { color: var(--accent); font-weight: 300; }
+  .sub { font-size: 11.5px; color: #9a8f80; margin-top: -3px; margin-left: 10px; }
+  header .fill { flex: 1; }
+  .toolbar {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    background: #1f1a12; border: 1px solid #3a3024; border-radius: 10px;
+    padding: 6px;
+  }
+  button {
+    font-family: inherit; font-size: 12.5px; font-weight: 600;
+    border: 1px solid #4a4030; color: var(--text);
+    background: linear-gradient(#3b3328, #2c2620);
+    border-radius: 8px; padding: 6px 11px; cursor: pointer;
+    transition: transform .05s, background .15s, border-color .15s;
+    white-space: nowrap;
+  }
+  button:hover { border-color: var(--accent); background: linear-gradient(#463d2f, #332c21); }
+  button:active { transform: translateY(1px); }
+  button.stop { border-color: #b4504a; color: #f3d6d3; background: linear-gradient(#5a322c, #472924); }
+  #status { font-size: 11.5px; color: #c7b9a2; text-align: center; }
+  main {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 8px 10px; overflow: hidden;
+  }
+  canvas {
+    width: 100%; height: 100%; max-width: 1560px;
+    border-radius: 14px; outline: none;
+    box-shadow: 0 30px 60px -18px rgba(0,0,0,.95), inset 0 2px 0 rgba(255,255,255,.06);
+  }
+  footer {
+    display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+    padding: 8px 18px 12px; font-size: 11.5px; color: #8f8573;
+  }
+  kbd {
+    font-family: inherit; font-size: 10.5px; font-weight: 600;
+    background: #3a3227; border: 1px solid #544839; border-bottom-width: 2px;
+    border-radius: 5px; padding: 1px 6px; color: #e7dccb;
+  }
+  .pedal {
+    width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+    border: 2px solid #9b9283; border-radius: 50%;
+    background: radial-gradient(circle at 50% 30%, #7d7365, #2d2922);
+    font-size: 10px; font-weight: 700; color: #d9d2c3; cursor: pointer;
+    transition: all .12s; user-select: none;
+  }
+  .pedal.active {
+    background: radial-gradient(circle at 50% 30%, var(--accent), #8f6b22);
+    border-color: var(--accent); transform: translateY(3px);
+  }
+  .fx-group { display: flex; align-items: center; gap: 6px; }
+  .fxBtn {
+    border-color: #5a6a7a; background: linear-gradient(#35404d, #28303a);
+    color: #cfe0ee; font-size: 12px; padding: 5px 9px;
+  }
+  .fxBtn.active { border-color: #6ab0e0; background: linear-gradient(#4577ad, #314b63); }
+  .vol-label { font-size: 11px; color: #9a8f80; min-width: 26px; }
+  input[type=range] {
+    -webkit-appearance: none; width: 84px; height: 4px; border-radius: 2px;
+    background: #544839; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 13px; height: 13px; border-radius: 50%;
+    background: var(--accent); border: 1px solid #7a5c1e;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="display:flex;flex-direction:column;">
+    <div class="logo">RESONANT<span> · piano</span></div>
+    <div class="sub">realistic additive synthesis · 88 keys · damper &amp; sustain</div>
+  </div>
+  <div class="fill"></div>
+  <div class="toolbar">
+    <button class="pedal" id="pedalBtn" title="Sustain pedal (Shift)">S</button>
+    <button id="stopBtn" title="Stop demo + silence all">■ Stop</button>
+    <button class="demoBtn" data-demo="0" title="Play demo 1">1 · Morning Mist</button>
+    <button class="demoBtn" data-demo="1" title="Play demo 2">2 · Night Drive</button>
+    <button class="demoBtn" data-demo="2" title="Play demo 3">3 · Little Waltz</button>
+    <button class="demoBtn" data-demo="3" title="Play demo 4">4 · Rain on Glass</button>
+    <span class="fx-group">
+      <button class="fxBtn" id="revBtn" title="Toggle reverb">~ Reverb</button>
+      <label class="vol-label" for="vol">Vol</label>
+      <input type="range" id="vol" min="0" max="1" step="0.01" value="0.9">
+    </span>
+  </div>
+</header>
+
+<main>
+  <canvas id="keys"></canvas>
+</main>
+
+<footer>
+  <div id="status">Click a key, or start a demo above. ✦</div>
+  <span><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd><kbd>I</kbd><kbd>O</kbd><kbd>P</kbd> — C4 row &nbsp;·&nbsp; <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd><kbd>B</kbd><kbd>N</kbd><kbd>M</kbd> — bass row &nbsp;·&nbsp; <kbd>Shift</kbd> — pedal</span>
+</footer>
+
+<script>
+(() => {
+"use strict";
+
+/* ================= KEYBOARD LAYOUT (A0–C8, 88 keys) ============= */
+const WHITE_SEMITONES = [0, 2, 4, 5, 7, 9, 11];
+const isWhite = m => WHITE_SEMITONES.includes(m % 12);
+
+const WHITE_KEYS = [];
+for (let m = 21; m <= 108; m++)
+  if (isWhite(m)) WHITE_KEYS.push({ midi: m, x: WHITE_KEYS.length });
+
+const BLACK_KEYS = [];
+const BLACK_OFFSET = { 0: 1, 2: 1, 5: 1, 7: 1, 9: 1 };
+WHITE_KEYS.forEach(w => {
+  const off = BLACK_OFFSET[w.midi % 12];
+  if (off && w.midi + off <= 108) BLACK_KEYS.push({ midi: w.midi + off, cx: w.x + 1, w: 0.62, top: 0.56 });
+});
+
+const KEY_BY_MIDI = {};
+WHITE_KEYS.forEach(k => { KEY_BY_MIDI[k.midi] = k; });
+BLACK_KEYS.forEach(k => { KEY_BY_MIDI[k.midi] = k; });
+
+const KEYMAP = {
+  W: 60, E: 62, R: 64, T: 65, Y: 67, U: 69, I: 71, O: 72, P: 74,
+  Z: 36, X: 38, C: 40, V: 43, B: 45, N: 48, M: 52
+};
+
+/* ================= AUDIO: additive piano model ================== */
+let ctx = null, master, noiseBuf, outGain, revGain, revFb, revOn = false, wetLevel = 0.35, outConn = true;
+let volLevel = 0.9;
+
+function makeReverb(c) {
+  const dur = 1.6; // short: dies fast, no long hum
+  const buffer = c.createBuffer(2, Math.max(1, Math.floor(c.sampleRate * dur)), c.sampleRate);
+  const delay = c.createDelay(dur);
+  delay.buffer = buffer;
+  const lp = c.createBiquadFilter();
+  lp.type = "lowpass"; lp.frequency.value = 1200;
+  const fb = c.createGain(); fb.gain.value = 0.42;
+  const input = c.createGain(); input.gain.value = 1;
+  const output = c.createGain(); output.gain.value = 1;
+  input.connect(lp);
+  lp.connect(delay);
+  delay.connect(fb);
+  fb.connect(lp);              // feedback loop
+  delay.connect(output);       // main wet
+  input.connect(output);       // early direct
+  return { send: input, out: output, fb };
+}
+function ensureAudio() {
+  if (ctx) { ctx.resume(); return; }
+  ctx = new AudioContext();
+  // long noise buffer for transients
+  const len = ctx.sampleRate;
+  const nb = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let c = 0; c < 2; c++)
+    for (let i = 0; i < len; i++) nb.getChannelData(c)[i] = Math.random() * 2 - 1;
+  noiseBuf = nb;
+  // main chain
+  master = ctx.createGain();
+  master.gain.value = 0.9;
+  const low = ctx.createBiquadFilter();
+  low.type = "lowpass"; low.frequency.value = 14000;
+  master.connect(low);
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.knee.value = 14;
+  comp.ratio.value = 5; comp.attack.value = 0.002; comp.release.value = 0.2;
+  low.connect(comp);
+  // final output (volume slider)
+  outGain = ctx.createGain();
+  outGain.gain.value = volLevel;
+  comp.connect(outGain);       // dry
+  // reverb send
+  const rev = makeReverb(ctx);
+  comp.connect(rev.send);
+  revFb = rev.fb;
+  revGain = ctx.createGain();
+  revGain.gain.value = revOn ? wetLevel : 0.0001;
+  rev.out.connect(revGain);
+  revGain.connect(outGain);    // wet
+  outGain.connect(ctx.destination);
+  outConn = true;
+}
+
+const midiToFreq = m => 440 * Math.pow(2, (m - 69) / 12);
+const activeNotes = [];
+
+function triggerNote(midi, vel, t) {
+  vel = Math.max(0.18, Math.min(1.25, vel || 0.6));
+  // if the Stop button cut the output, reconnect it (and revive the reverb to match toggle state)
+  if (outConn === false) {
+    // cancel any pending mute automation from silenceAll() before restoring the volume
+    const now = ctx.currentTime;
+    outGain.gain.cancelScheduledValues(now);
+    outGain.gain.setValueAtTime(volLevel, now);
+    try { outGain.connect(ctx.destination); } catch (e) {}
+    outConn = true;
+  }
+  if (revFb) revFb.gain.setTargetAtTime(0.42, t, 0.05);
+  if (revGain) revGain.gain.setTargetAtTime(revOn ? wetLevel : 0.0001, t, 0.05);
+  const f0 = midiToFreq(midi);
+  const b = Math.min(0.004, 0.001 * Math.pow(110 / f0, 2)); // inharmonicity: stronger in bass
+  const gain = ctx.createGain();
+  const pan = ctx.createStereoPanner();
+  pan.pan.value = Math.min(0.28, (midi - 56) * 0.004); // register-based stereo image
+  gain.connect(pan); pan.connect(master);
+
+  const peak = 0.03 + 0.22 * vel;
+  const oscs = [];
+  let maxDecay = 0;
+  for (let n = 1; n <= 14; n++) {
+    const f = f0 * n * Math.sqrt(1 + b * n * n);
+    if (f > 17000) break;
+    let amp = Math.pow(1 / n, 1.9);
+    if (n <= 3) amp *= 1.55;
+    if (n === 4) amp *= 0.5;
+    if (amp * peak < 0.004) break;
+    const decay = (3.2 + 2.2 * vel) / (1 + 0.16 * (n - 1));
+    maxDecay = Math.max(maxDecay, decay);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.value = f;
+    const g = ctx.createGain();
+    const tA = 0.0012 + vel * 0.005;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(amp * peak, t + tA);
+    g.gain.exponentialRampToValueAtTime(amp * peak * 0.012, t + decay);
+    osc.connect(g); g.connect(gain);
+    osc.start(t);
+    osc.stop(t + decay + 9);
+    oscs.push(osc);
+  }
+
+  // hammer strike: broadband transient + fundamental thump
+  const ns = ctx.createBufferSource();
+  ns.buffer = noiseBuf;
+  const fl = ctx.createBiquadFilter();
+  fl.type = "lowpass"; fl.frequency.value = 5500 + f0 * 5;
+  const ng = ctx.createGain();
+  ng.gain.setValueAtTime(0.08 + vel * 0.3, t);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.011);
+  ns.connect(fl); fl.connect(ng); ng.connect(master);
+  ns.start(t); ns.stop(t + 0.012);
+
+  const fo = ctx.createOscillator();
+  fo.type = "sine"; fo.frequency.value = f0;
+  const fg = ctx.createGain();
+  fg.gain.setValueAtTime(0.2 + vel * 0.55, t);
+  fg.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+  fo.connect(fg); fg.connect(master);
+  fo.start(t); fo.stop(t + 0.05);
+
+  const note = { midi, gain, alive: true, oscs };
+  activeNotes.push(note);
+  // cleanup only after the note has actually started (t - now for scheduled notes)
+  // and the natural decay has fully faded (decay is in seconds -> *1000 ms)
+  const untilStart = Math.max(0, t - ctx.currentTime);
+  setTimeout(() => killNote(note), (untilStart + maxDecay + 9) * 1000);
+  return note;
+}
+
+function killNote(note) {
+  if (!note.alive) return;
+  note.alive = false;
+  const t = ctx.currentTime + 0.005;
+  note.oscs.forEach(o => { try { o.stop(t); } catch (e) {} });
+  const i = activeNotes.indexOf(note);
+  if (i >= 0) activeNotes.splice(i, 1);
+}
+function damperNote(note, dur) {
+  if (!note.alive) return;
+  const t = ctx.currentTime + 0.002;
+  const g = note.gain.gain;
+  g.cancelScheduledValues(t);
+  g.setValueAtTime(Math.max(g.value, 0.001), t);
+  g.exponentialRampToValueAtTime(0.0001, t + dur);
+  setTimeout(() => killNote(note), dur + 1300);
+}
+// short low thump used for damper / pedal / key mechanical sounds
+function thump(freq, vel) {
+  if (!ctx) return;
+  const t = ctx.currentTime + 0.002;
+  const ns = ctx.createBufferSource();
+  ns.buffer = noiseBuf;
+  const bp = ctx.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = freq;
+  bp.Q.value = 1.4;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(Math.max(vel, 0.001), t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  ns.connect(bp); bp.connect(g); g.connect(outGain);
+  ns.start(t); ns.stop(t + 0.1);
+}
+// kill the reverb feedback loop so the tail stops humming immediately
+function killReverbTail() {
+  if (!ctx) return;
+  const t = ctx.currentTime + 0.002;
+  if (revFb) revFb.gain.setTargetAtTime(0, t, 0.004);
+  if (revGain) revGain.gain.setTargetAtTime(0, t, 0.004);
+}
+// guaranteed hard-stop: kill every note + reverb tail + cut the master output (Stop button)
+function silenceAll() {
+  if (!ctx) return;
+  const t = ctx.currentTime + 0.003;
+  for (const n of activeNotes) {
+    if (n.alive) {
+      n.alive = false;
+      n.oscs.forEach(o => { try { o.stop(t); } catch (e) {} });
+      const g = n.gain.gain;
+      g.cancelScheduledValues(t);
+      g.setValueAtTime(0, t);
+    }
+  }
+  activeNotes.length = 0;
+  killReverbTail();
+  // hard disconnect the master output so NOTHING (incl. any leftover reverb tail) can reach the speakers
+  try { outGain.gain.setValueAtTime(0, t); } catch (e) {}
+  if (outConn) { try { outGain.disconnect(); } catch (e) {} outConn = false; }
+}
+
+/* ================= PEDAL & LIVE KEYS ============================= */
+let pedalOn = false;
+let noteState = {}; // midi -> note obj while key is down
+const pedalBtn = document.getElementById("pedalBtn");
+
+function setPedal(v) {
+  v = !!v;
+  if (pedalBtn) pedalBtn.classList.toggle("active", v);
+  if (v === pedalOn) return;
+  pedalOn = v;
+  if (v) {
+    // dampers lift off the strings — soft click
+    thump(160, 0.12);
+  } else {
+    // dampers hit the strings — soft thump + damp all ringing notes
+    thump(120, 0.18);
+    const t = ctx.currentTime + 0.004;
+    for (const n of activeNotes) {
+      if (n.alive) {
+        const g = n.gain.gain;
+        g.cancelScheduledValues(t);
+        g.setValueAtTime(Math.max(g.value, 0.001), t);
+        g.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      }
+    }
+  }
+}
+
+function pressNote(midi, vel) {
+  ensureAudio();
+  ctx.resume();
+  keyAnim[midi] = { on: true, t: performance.now() };
+  vel = vel || 0.62;
+  if (noteState[midi]) damperNote(noteState[midi], 0.12);
+  noteState[midi] = triggerNote(midi, vel, ctx.currentTime + 0.002);
+  startAnim();
+}
+function releaseNote(midi) {
+  if (!keyAnim[midi]) return;
+  keyAnim[midi] = { on: false, t: performance.now() };
+  const n = noteState[midi];
+  if (n) {
+    delete noteState[midi];
+    if (!pedalOn) { damperNote(n, 0.32); thump(300, 0.02); }
+  }
+  startAnim();
+}
+
+/* ================= DEMOS (original compositions) ================== */
+/*
+  Each piece: 4/4 (Little Waltz is 3/4). beats (b) are in quarter-note units.
+  v = velocity 0.15..0.9 for dynamic shaping.
+*/
+/* ================= DEMOS (original compositions) ================== */
+const DEMOS = [
+  {
+    title: "Morning Mist",
+    bpm: 72,
+    events: [
+      /* intro — gentle Cmaj7 arpeggio, pp */
+      {b:0,m:48,d:1,v:.30},{b:1,m:52,d:1,v:.30},{b:2,m:55,d:1,v:.32},{b:3,m:60,d:1,v:.34},
+      {b:4,m:64,d:1,v:.36},{b:5,m:67,d:1,v:.38},{b:6,m:72,d:1,v:.40},{b:7,m:64,d:1,v:.38},
+      {b:8,m:57,d:1,v:.36},{b:9,m:60,d:1,v:.38},{b:10,m:52,d:1,v:.36},{b:11,m:57,d:1,v:.40},
+      {b:8,m:64,d:2,v:.45},{b:10,m:62,d:2,v:.48},
+      {b:12,m:41,d:1,v:.40},{b:13,m:45,d:1,v:.40},{b:14,m:48,d:1,v:.42},{b:15,m:53,d:1,v:.40},
+      {b:12,m:71,d:1,v:.44},{b:13,m:69,d:1,v:.48},{b:14,m:72,d:2,v:.50},
+      {b:16,m:48,d:1,v:.42},{b:17,m:52,d:1,v:.42},{b:18,m:55,d:1,v:.44},{b:19,m:60,d:1,v:.44},
+      {b:16,m:72,d:1,v:.50},{b:17,m:76,d:1,v:.52},{b:18,m:72,d:1,v:.52},{b:19,m:74,d:1,v:.48},
+      {b:20,m:43,d:1,v:.42},{b:21,m:47,d:1,v:.42},{b:22,m:50,d:1,v:.44},{b:23,m:55,d:1,v:.44},
+      {b:20,m:74,d:1,v:.52},{b:21,m:71,d:1,v:.52},{b:22,m:74,d:1,v:.55},{b:23,m:72,d:1,v:.50},
+      {b:24,m:45,d:1,v:.44},{b:25,m:48,d:1,v:.44},{b:26,m:52,d:1,v:.46},{b:27,m:57,d:1,v:.46},
+      {b:24,m:76,d:1,v:.55},{b:25,m:74,d:1,v:.52},{b:26,m:72,d:2,v:.50},
+      {b:28,m:48,d:1,v:.46},{b:29,m:52,d:1,v:.46},{b:30,m:55,d:1,v:.48},{b:31,m:60,d:1,v:.48},
+      {b:28,m:72,d:1,v:.55},{b:29,m:76,d:1,v:.55},{b:30,m:72,d:1,v:.55},{b:31,m:76,d:1,v:.52},
+      /* modulation to A minor — the mist deepens */
+      {b:32,m:45,d:1,v:.48},{b:33,m:48,d:1,v:.48},{b:34,m:52,d:1,v:.50},{b:35,m:60,d:1,v:.50},
+      {b:32,m:81,d:1,v:.55},{b:33,m:76,d:1,v:.52},{b:34,m:72,d:1,v:.55},{b:35,m:74,d:1,v:.52},
+      {b:36,m:43,d:1,v:.50},{b:37,m:47,d:1,v:.50},{b:38,m:50,d:1,v:.52},{b:39,m:55,d:1,v:.52},
+      {b:36,m:74,d:1,v:.55},{b:37,m:79,d:1,v:.55},{b:38,m:74,d:1,v:.55},{b:39,m:71,d:1,v:.55},
+      /* climax */
+      {b:40,m:36,d:1,v:.55},{b:41,m:40,d:1,v:.55},{b:42,m:48,d:1,v:.60},{b:43,m:52,d:1,v:.55},
+      {b:40,m:72,d:1,v:.60},{b:41,m:76,d:1,v:.60},{b:42,m:84,d:1,v:.65},{b:43,m:81,d:1,v:.60},
+      {b:44,m:36,d:1,v:.50},{b:45,m:40,d:1,v:.50},{b:46,m:48,d:1,v:.45},{b:47,m:52,d:1,v:.40},
+      {b:44,m:76,d:1,v:.50},{b:45,m:72,d:1,v:.50},{b:46,m:64,d:1,v:.48},{b:47,m:60,d:2,v:.45},
+      /* coda — resolve to C, piano */
+      {b:48,m:48,d:4,v:.30},{b:48,m:55,d:4,v:.30},{b:48,m:60,d:4,v:.30},{b:48,m:72,d:4,v:.34},
+      {b:48,m:84,d:4,v:.30}
+    ]
+  },
+  {
+    title: "Night Drive",
+    bpm: 96,
+    events: [
+      /* walking bass */
+      {b:0,m:48,d:1,v:.45},{b:1,m:50,d:1,v:.42},{b:2,m:52,d:1,v:.42},{b:3,m:47,d:1,v:.40},
+      {b:4,m:52,d:1,v:.45},{b:5,m:55,d:1,v:.42},{b:6,m:57,d:1,v:.42},{b:7,m:55,d:1,v:.40},
+      {b:8,m:53,d:1,v:.45},{b:9,m:56,d:1,v:.42},{b:10,m:60,d:1,v:.42},{b:11,m:56,d:1,v:.40},
+      {b:12,m:55,d:1,v:.45},{b:13,m:59,d:1,v:.42},{b:14,m:62,d:1,v:.42},{b:15,m:59,d:1,v:.40},
+      {b:16,m:48,d:1,v:.45},{b:17,m:52,d:1,v:.42},{b:18,m:55,d:1,v:.42},{b:19,m:52,d:1,v:.40},
+      {b:20,m:50,d:1,v:.45},{b:21,m:53,d:1,v:.42},{b:22,m:57,d:1,v:.42},{b:23,m:53,d:1,v:.40},
+      {b:24,m:55,d:1,v:.45},{b:25,m:59,d:1,v:.42},{b:26,m:62,d:1,v:.42},{b:27,m:59,d:1,v:.40},
+      {b:28,m:60,d:1,v:.45},{b:29,m:64,d:1,v:.42},{b:30,m:67,d:1,v:.42},{b:31,m:70,d:1,v:.40},
+      {b:32,m:48,d:1,v:.45},{b:33,m:52,d:1,v:.42},{b:34,m:55,d:1,v:.42},{b:35,m:48,d:1,v:.40},
+      /* chord-melody */
+      {b:0,m:67,d:1,v:.50},{b:0,m:71,d:1,v:.50},{b:0,m:74,d:1,v:.50},{b:1,m:76,d:1,v:.45},
+      {b:4,m:70,d:1,v:.50},{b:4,m:74,d:1,v:.50},{b:4,m:76,d:1,v:.50},{b:5,m:79,d:1,v:.45},
+      {b:8,m:68,d:1,v:.50},{b:8,m:72,d:1,v:.50},{b:8,m:76,d:1,v:.50},{b:9,m:77,d:1,v:.45},
+      {b:12,m:71,d:1,v:.50},{b:12,m:74,d:1,v:.50},{b:12,m:77,d:1,v:.50},{b:13,m:74,d:1,v:.45},
+      {b:16,m:67,d:1,v:.50},{b:16,m:71,d:1,v:.50},{b:16,m:74,d:1,v:.50},{b:17,m:76,d:1,v:.45},
+      {b:20,m:65,d:1,v:.50},{b:20,m:69,d:1,v:.50},{b:20,m:72,d:1,v:.50},{b:21,m:74,d:1,v:.45},
+      {b:24,m:71,d:1,v:.50},{b:24,m:74,d:1,v:.50},{b:24,m:77,d:1,v:.50},{b:25,m:79,d:1,v:.45},
+      {b:28,m:64,d:1,v:.50},{b:28,m:67,d:1,v:.50},{b:28,m:70,d:1,v:.50},{b:29,m:74,d:1,v:.45},
+      {b:32,m:67,d:2,v:.52},{b:32,m:71,d:2,v:.52},{b:32,m:74,d:2,v:.52},{b:35,m:84,d:2,v:.45}
+    ]
+  },
+  {
+    title: "Little Waltz",
+    bpm: 120,
+    events: [
+      /* broken chords (3/4) */
+      {b:0,m:48,d:1,v:.45},{b:1,m:55,d:1,v:.38},{b:2,m:60,d:1,v:.38},
+      {b:3,m:45,d:1,v:.45},{b:4,m:52,d:1,v:.38},{b:5,m:57,d:1,v:.38},
+      {b:6,m:41,d:1,v:.45},{b:7,m:48,d:1,v:.38},{b:8,m:53,d:1,v:.38},
+      {b:9,m:48,d:1,v:.45},{b:10,m:55,d:1,v:.38},{b:11,m:60,d:1,v:.38},
+      {b:12,m:43,d:1,v:.45},{b:13,m:50,d:1,v:.38},{b:14,m:55,d:1,v:.38},
+      {b:15,m:45,d:1,v:.45},{b:16,m:52,d:1,v:.38},{b:17,m:57,d:1,v:.38},
+      {b:18,m:41,d:1,v:.45},{b:19,m:48,d:1,v:.38},{b:20,m:53,d:1,v:.38},
+      {b:21,m:48,d:1,v:.45},{b:22,m:55,d:1,v:.38},{b:23,m:60,d:1,v:.38},
+      /* melody */
+      {b:0,m:76,d:1,v:.50},{b:1,m:72,d:1,v:.50},{b:2,m:74,d:1,v:.50},
+      {b:3,m:71,d:1,v:.50},{b:4,m:69,d:1,v:.50},{b:5,m:71,d:1,v:.50},
+      {b:6,m:72,d:1,v:.50},{b:7,m:69,d:1,v:.50},{b:8,m:72,d:1,v:.50},
+      {b:9,m:67,d:1,v:.50},{b:10,m:64,d:1,v:.48},{b:11,m:67,d:1,v:.50},
+      {b:12,m:74,d:1,v:.50},{b:13,m:71,d:1,v:.50},{b:14,m:74,d:1,v:.50},
+      {b:15,m:76,d:1,v:.50},{b:16,m:72,d:1,v:.48},{b:17,m:76,d:1,v:.50},
+      {b:18,m:69,d:1,v:.50},{b:19,m:65,d:1,v:.48},{b:20,m:69,d:1,v:.50},
+      {b:21,m:72,d:1,v:.50},{b:22,m:67,d:1,v:.48},{b:23,m:72,d:2,v:.50},
+      /* final cadence */
+      {b:24,m:36,d:3,v:.50},{b:24,m:48,d:3,v:.45},{b:24,m:60,d:3,v:.50},{b:24,m:72,d:3,v:.52}
+    ]
+  },
+  {
+    title: "Rain on Glass",
+    bpm: 66,
+    events: [
+      /* droning left hand */
+      {b:0,m:38,d:1,v:.40},{b:1,m:45,d:1,v:.36},{b:2,m:48,d:1,v:.36},{b:3,m:50,d:1,v:.40},
+      {b:4,m:34,d:1,v:.40},{b:5,m:46,d:1,v:.36},{b:6,m:50,d:1,v:.36},{b:7,m:53,d:1,v:.40},
+      {b:8,m:31,d:1,v:.40},{b:9,m:43,d:1,v:.36},{b:10,m:50,d:1,v:.36},{b:11,m:53,d:1,v:.40},
+      {b:12,m:39,d:1,v:.40},{b:13,m:43,d:1,v:.36},{b:14,m:46,d:1,v:.36},{b:15,m:51,d:1,v:.40},
+      {b:16,m:38,d:1,v:.40},{b:17,m:45,d:1,v:.36},{b:18,m:48,d:1,v:.36},{b:19,m:50,d:1,v:.40},
+      {b:20,m:34,d:1,v:.40},{b:21,m:46,d:1,v:.36},{b:22,m:50,d:1,v:.36},{b:23,m:53,d:1,v:.40},
+      {b:24,m:41,d:1,v:.40},{b:25,m:45,d:1,v:.36},{b:26,m:48,d:1,v:.36},{b:27,m:53,d:1,v:.40},
+      {b:28,m:38,d:1,v:.40},{b:29,m:45,d:1,v:.36},{b:30,m:48,d:1,v:.36},{b:31,m:50,d:1,v:.40},
+      /* modal melody (D dorian) */
+      {b:0,m:69,d:1,v:.45},{b:1,m:74,d:1,v:.48},{b:2,m:76,d:1,v:.50},{b:3,m:74,d:1,v:.45},
+      {b:4,m:74,d:1,v:.45},{b:5,m:70,d:1,v:.48},{b:6,m:69,d:1,v:.45},{b:7,m:70,d:1,v:.48},
+      {b:8,m:74,d:1,v:.45},{b:9,m:67,d:1,v:.48},{b:10,m:70,d:1,v:.45},{b:11,m:67,d:1,v:.45},
+      {b:12,m:69,d:1,v:.45},{b:13,m:72,d:1,v:.48},{b:14,m:70,d:1,v:.45},{b:15,m:72,d:1,v:.48},
+      {b:16,m:76,d:1,v:.50},{b:17,m:74,d:1,v:.45},{b:18,m:72,d:1,v:.45},{b:19,m:74,d:1,v:.48},
+      {b:20,m:70,d:1,v:.45},{b:21,m:69,d:1,v:.45},{b:22,m:70,d:1,v:.45},{b:23,m:72,d:1,v:.48},
+      {b:24,m:69,d:1,v:.45},{b:25,m:72,d:1,v:.48},{b:26,m:69,d:1,v:.45},{b:27,m:70,d:1,v:.48},
+      {b:28,m:74,d:1,v:.50},{b:29,m:76,d:1,v:.48},{b:30,m:74,d:1,v:.45},{b:31,m:69,d:1,v:.45},
+      /* resolve to Dm */
+      {b:32,m:38,d:4,v:.42},{b:32,m:45,d:4,v:.42},{b:32,m:50,d:4,v:.42},{b:32,m:74,d:4,v:.48}
+    ]
+  }
+];
+;
+
+// how far ahead to schedule notes: small enough that scheduled notes
+// never play before their cleanup window opens
+const LOOKAHEAD = 0.25;
+let demo = null;
+function startDemo(i) {
+  stopDemo();
+  ensureAudio();
+  ctx.resume();
+  const d = DEMOS[i];
+  const spb = 60 / d.bpm;
+  const events = d.events.slice().sort((a, b) => a.b - b.b);
+  const lastBeat = Math.max.apply(null, d.events.map(e => e.b + e.d));
+  const dm = { events, spb, startT: ctx.currentTime + 0.15, idx: 0, active: true, endScheduled: false, deadline: ctx.currentTime + lastBeat * spb + 20 };
+  dm.timer = setInterval(() => scheduleBatch(dm), 40);
+  demo = dm;
+  updateStatus("Playing: " + d.title + " — " + d.bpm + " bpm");
+  scheduleBatch(dm);
+}
+function endDemo(d) {
+  if (!d.active) return;
+  d.active = false;
+  clearInterval(d.timer);
+  killReverbTail();   // the last notes have fully stopped by here, so the tail can die
+  updateStatus("Demo finished. ✦");
+}
+function scheduleBatch(d) {
+  if (!d.active) return;
+  // hard deadline: if the piece should have ended but the scheduler is still alive, wrap it up
+  if (ctx.currentTime > (d.deadline || d.startT + 120)) { endDemo(d); return; }
+  while (d.idx < d.events.length) {
+    const ev = d.events[d.idx];
+    const t = d.startT + ev.b * d.spb;
+    if (t > ctx.currentTime + LOOKAHEAD) break;
+    if (t <= ctx.currentTime + 0.03) { d.idx++; continue; }
+    triggerNote(ev.m, ev.v, t);
+    scheduleKeyVisual(ev, t, d, ev.d * d.spb);
+    d.idx++;
+  }
+  if (d.idx >= d.events.length && !d.endScheduled) {
+    // schedule endDemo() after the final event's notes have actually played
+    // (note stop margin: longest decay + the built-in 9s stop padding)
+    const last = Math.max.apply(null, d.events.map(e => e.b + e.d));
+    d.endScheduled = true;
+    const untilEnd = Math.max(0, d.startT + last * d.spb + 15 - ctx.currentTime);
+    setTimeout(() => { if (d.active) endDemo(d); }, untilEnd * 1000);
+  }
+}
+// light up the keys in sync with the demo, guarded so visuals stop when the demo stops
+function scheduleKeyVisual(ev, t, d, durSec) {
+  const pressMs = Math.max(0, (t - ctx.currentTime) * 1000);
+  setTimeout(() => { if (demo === d) setKey(ev.m, true); }, pressMs);
+  setTimeout(() => { if (demo === d) setKey(ev.m, false); }, pressMs + durSec * 1000);
+}
+function stopDemo() {
+  if (demo) {
+    clearInterval(demo.timer);
+    demo.active = false;
+    demo = null;
+  }
+  silenceAll();   // actually cut all currently sounding notes
+  // release any keys the demo left visually lit so they don't stay "pressed"
+  for (const m in keyAnim) if (keyAnim[m].on) setKey(+m, false);
+  updateStatus("Stopped.");
+}
+
+/* ================= CANVAS ================= ===================== */
+const canvas = document.getElementById("keys");
+const g = canvas.getContext("2d");
+let W = 0, H = 0, scale = 1;
+const keyAnim = {};
+let animRunning = false;
+
+function keyDepth(midi) {
+  const s = keyAnim[midi];
+  if (!s) return 0;
+  if (s.on) return 1;
+  return Math.max(0, 1 - (performance.now() - s.t) / 140);
+}
+function setKey(midi, down) {
+  keyAnim[midi] = { on: down, t: performance.now() };
+  startAnim();
+}
+function startAnim() {
+  if (animRunning) return;
+  animRunning = true;
+  requestAnimationFrame(animLoop);
+}
+function animLoop() {
+  draw();
+  let busy = false;
+  for (const m in keyAnim) {
+    const d = keyDepth(+m);
+    if (d > 0.001 && d < 0.999) { busy = true; break; }
+    if (d <= 0) delete keyAnim[m];
+  }
+  if (busy) requestAnimationFrame(animLoop);
+  else { animRunning = false; }
+}
+
+function draw() {
+  // felt / rim
+  g.fillStyle = "#3a2c1c";
+  g.fillRect(0, 0, W, H + 8);
+  // white keys
+  for (let i = 0; i < WHITE_KEYS.length; i++) {
+    const x = i * scale, w = scale, d = keyDepth(WHITE_KEYS[i].midi);
+    g.fillStyle = d > 0.05 ? "#e6decf" : "#f3eee4";
+    g.fillRect(x + 0.5, 2, w - 1, H - 4);
+    const gr = g.createLinearGradient(x, 0, x + w, 0);
+    gr.addColorStop(0, "rgba(255,255,255,0.10)");
+    gr.addColorStop(0.5, "rgba(255,255,255,0.00)");
+    gr.addColorStop(1, "rgba(0,0,0,0.05)");
+    g.fillStyle = gr;
+    g.fillRect(x + 1, 3, w - 2, H - 6);
+    if (d > 0.02) {
+      g.fillStyle = "rgba(0,0,0," + d * 0.18 + ")";
+      g.fillRect(x, H * 0.55, w, H * 0.45);
+      g.strokeStyle = "rgba(217,164,65,0.85)";
+      g.lineWidth = 2;
+      g.strokeRect(x + 0.5, H * 0.55 + 0.5, w - 1, H * 0.45 - 1);
+    }
+    // middle C marker
+    if (WHITE_KEYS[i].midi === 60) {
+      g.fillStyle = "#7a7063";
+      g.font = "10px monospace";
+      g.textAlign = "center";
+      g.fillText("C", x + w / 2, H - 12);
+    }
+  }
+  // black keys
+  for (const bk of BLACK_KEYS) {
+    const cx = bk.cx * scale, w = bk.w * scale, h = bk.top * H;
+    const d = keyDepth(bk.midi);
+    g.fillStyle = d > 0.05 ? "#2b2621" : "#151310";
+    g.beginPath();
+    g.moveTo(cx - w / 2 + 1, 3);
+    g.lineTo(cx + w / 2 - 1, 3);
+    g.lineTo(cx + w / 2 - 2, h + 1);
+    g.lineTo(cx - w / 2 + 2, h + 1);
+    g.closePath();
+    g.fill();
+    const gr = g.createLinearGradient(cx - w / 2, 0, cx + w / 2, 0);
+    gr.addColorStop(0, "rgba(255,255,255,0.05)");
+    gr.addColorStop(0.5, "rgba(255,255,255,0.00)");
+    gr.addColorStop(1, "rgba(0,0,0,0.10)");
+    g.fillStyle = gr;
+    g.fillRect(cx - w / 2 + 2, 3, w - 4, h);
+    if (d > 0.02) {
+      g.strokeStyle = "rgba(217,164,65,0.85)";
+      g.lineWidth = 2;
+      g.beginPath();
+      g.moveTo(cx - w / 2, 2);
+      g.lineTo(cx + w / 2, 2);
+      g.lineTo(cx + w / 2, h + 1);
+      g.lineTo(cx - w / 2, h + 1);
+      g.closePath();
+      g.stroke();
+    }
+  }
+  // wood rim on top
+  g.fillStyle = "rgba(120,84,50,0.9)";
+  g.fillRect(0, 0, W, 6);
+}
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  W = Math.floor(rect.width) || Math.floor(window.innerWidth - 20);
+  H = Math.floor(rect.height) || Math.floor(window.innerHeight - 140);
+  canvas.width = W;
+  canvas.height = H;
+  scale = W / WHITE_KEYS.length;
+  draw();
+}
+
+function midiFromPoint(px, py) {
+  const x = px / scale;
+  if (x < 0 || x >= WHITE_KEYS.length) return null;
+  if (py < H * 0.6) {
+    for (const bk of BLACK_KEYS)
+      if (Math.abs(x - bk.cx) <= bk.w / 2 + 0.05) return bk.midi;
+  }
+  return WHITE_KEYS[Math.floor(x)].midi;
+}
+
+/* ================= INPUT ================= ===================== */
+canvas.addEventListener("mousedown", e => {
+  const r = canvas.getBoundingClientRect();
+  const m = midiFromPoint(e.clientX - r.left, e.clientY - r.top);
+  if (m != null) { pressNote(m, 0.62); setKey(m, true); }
+});
+window.addEventListener("mouseup", () => {
+  for (const m in keyAnim) if (keyAnim[m].on) releaseNote(+m);
+});
+
+/* Touch: per-finger tracking + glissando */
+const touchMidi = {};
+canvas.addEventListener("touchstart", e => {
+  for (const t of e.touches) {
+    const r = canvas.getBoundingClientRect();
+    const m = midiFromPoint(t.clientX - r.left, t.clientY - r.top);
+    if (m != null && touchMidi[t.identifier] === undefined) {
+      pressNote(m, 0.62);
+      setKey(m, true);
+      touchMidi[t.identifier] = m;
+    }
+  }
+}, { passive: true });
+canvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  for (const t of e.touches) {
+    const r = canvas.getBoundingClientRect();
+    const m = midiFromPoint(t.clientX - r.left, t.clientY - r.top);
+    const old = touchMidi[t.identifier];
+    if (m === old) continue;
+    if (old != null) { releaseNote(old); setKey(old, false); }
+    if (m != null) { pressNote(m, 0.62); setKey(m, true); }
+    touchMidi[t.identifier] = m;
+  }
+}, { passive: false });
+canvas.addEventListener("touchend", e => {
+  for (const t of e.changedTouches) {
+    const m = touchMidi[t.identifier];
+    if (m != null) { releaseNote(m); setKey(m, false); delete touchMidi[t.identifier]; }
+  }
+}, { passive: false });
+canvas.addEventListener("touchcancel", e => {
+  for (const t of e.changedTouches) {
+    const m = touchMidi[t.identifier];
+    if (m != null) { releaseNote(m); setKey(m, false); delete touchMidi[t.identifier]; }
+  }
+}, { passive: false });
+
+window.addEventListener("keydown", e => {
+  if (e.repeat) return;
+  if (e.key === "Shift") { setPedal(true); e.preventDefault(); return; }
+  const m = KEYMAP[e.key.toUpperCase()];
+  if (m) { pressNote(m, 0.55); setKey(m, true); }
+});
+window.addEventListener("keyup", e => {
+  if (e.key === "Shift") { setPedal(false); return; }
+  const m = KEYMAP[e.key.toUpperCase()];
+  if (m) releaseNote(m);
+});
+
+document.getElementById("stopBtn").addEventListener("click", stopDemo);
+document.querySelectorAll(".demoBtn").forEach(b => {
+  b.addEventListener("click", () => startDemo(+b.dataset.demo));
+});
+pedalBtn.addEventListener("click", () => setPedal(!pedalOn));
+const revBtn = document.getElementById("revBtn");
+revBtn.classList.toggle("active", revOn);
+revBtn.addEventListener("click", () => {
+  revOn = !revOn;
+  revBtn.classList.toggle("active", revOn);
+  if (ctx) {
+    revGain.gain.setTargetAtTime(revOn ? wetLevel : 0.0001, ctx.currentTime, 0.08);
+  }
+});
+const volEl = document.getElementById("vol");
+volEl.addEventListener("input", () => {
+  volLevel = parseFloat(volEl.value);
+  if (ctx) outGain.gain.value = volLevel;
+});
+
+function updateStatus(txt) {
+  document.getElementById("status").textContent = txt;
+}
+
+window.addEventListener("resize", resize);
+window.addEventListener("load", resize);
+})();
+</script>
+</body>
+</html>

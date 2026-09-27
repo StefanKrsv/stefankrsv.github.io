@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Lumen Museum — A Museum of Vector Light</title>
+<meta name="description" content="A digital museum of hand-painted works rendered entirely in HTML, CSS and SVG vector. No pixels were harmed.">
+<style>
+  /* ============================================================
+     THE LUMEN MUSEUM
+     A single-file gallery. Every work is painted in CSS + SVG.
+     ============================================================ */
+
+  :root {
+    --wall:   #17150f;
+    --wall-2: #1f1c14;
+    --panel:  #232019;
+    --frame:  #4a3726;
+    --frame-2:#5f4a33;
+    --gold:   #c9a24b;
+    --gold-2: #e4c878;
+    --ivory:  #efe7d6;
+    --muted:  #a69a83;
+    --cream:  #f6e6c4;
+    --serif:  "Bodoni MT","Didot","Playfair Display",Georgia,"Times New Roman",serif;
+    --sans:   "Avenir Next","Helvetica Neue",Helvetica,Arial,sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--wall);
+    color: var(--ivory);
+    font-family: var(--sans);
+    overflow-x: hidden;
+  }
+
+  /* grain over everything — the walls have texture */
+  body::after {
+    content:""; position: fixed; inset: 0;
+    pointer-events:none; z-index: 200;
+    background-image: radial-gradient(rgba(255,255,255,.028) 1px, transparent 1.4px);
+    background-size: 26px 26px;
+    mix-blend-mode: overlay;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    position: fixed; top:0; left:0; right:0; z-index: 100;
+    background: rgba(17,21,15,.92);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(201,162,75,.28);
+  }
+  .bar {
+    max-width: 1280px; margin: 0 auto; padding: .95rem 2rem;
+    display: flex; align-items: baseline; gap: 2rem;
+  }
+  .brand {
+    font-family: var(--serif); font-size: 1.15rem; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--ivory); text-decoration: none;
+  }
+  .brand small { display:block; font-family: var(--sans); font-size: .58rem; letter-spacing: .34em; color: var(--muted); }
+  nav { margin-left: auto; display: flex; gap: 1.4rem; flex-wrap: wrap; }
+  nav a {
+    color: var(--muted); text-decoration: none;
+    font-size: .68rem; letter-spacing: .24em; text-transform: uppercase;
+    padding: .4rem 0; position: relative;
+  }
+  nav a::after { content:""; position:absolute; left:0; right:0; bottom:0; height:1px; background: var(--gold); transform: scaleX(0); transform-origin:left; transition: transform .35s ease; }
+  nav a:hover, nav a.active { color: var(--gold-2); }
+  nav a:hover::after, nav a.active::after { transform: scaleX(1); }
+
+  .progress { height:2px; background: var(--gold); width:0%; position:absolute; left:0; bottom:-1px; }
+
+  /* ---------- atrium ---------- */
+  #atrium {
+    min-height: 100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 12rem 1.5rem 5rem;
+    position: relative;
+    background:
+      radial-gradient(1200px 500px at 50% -60px, rgba(201,162,75,.10), transparent 70%),
+      var(--wall);
+  }
+  .kicker { font-size:.66rem; letter-spacing:.5em; text-transform:uppercase; color: var(--gold-2); margin-bottom: 1.6rem; }
+  #atrium h1 {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(3.4rem, 9vw, 7.4rem);
+    letter-spacing: .02em; line-height: 1.02;
+    background: linear-gradient(180deg, #f3ead2 0%, #d8c99a 55%, #8f7d45 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 1.2rem;
+  }
+  .sub { max-width: 560px; color: var(--muted); font-size: 1.02rem; line-height: 1.65; margin: 0 0 2.2rem; }
+  .divider { width: min(340px, 60%); border-top: 1px solid rgba(201,162,75,.5); margin: 0 auto; position: relative; }
+  .divider::before { content:""; position:absolute; top:-5px; left:50%; transform: translateX(-50%); width: 34px; height: 34px; border: 1px solid var(--gold); background: transparent; }
+  .divider::after { content:""; position:absolute; top:11px; left:50%; transform: translateX(-50%); width: 6px; height: 6px; background: var(--gold); }
+  .admissions {
+    margin-top: 2.4rem;
+    font-size: .62rem; letter-spacing: .42em; text-transform: uppercase;
+    color: var(--muted); display: flex; gap: 1.8rem; justify-content: center; flex-wrap: wrap;
+  }
+  .admissions b { color: var(--gold-2); font-weight: 500; }
+  .down { margin-top: 3rem; color: var(--gold); font-size: .6rem; letter-spacing: .35em; text-transform: uppercase; }
+
+  /* ---------- rooms ---------- */
+  .room { padding: 9rem 1.5rem 4rem; }
+  .room-head { max-width: 1060px; margin: 0 auto; padding-bottom: 3.2rem; position: relative; }
+  .num { font-family: var(--serif); font-size: .8rem; letter-spacing: .3em; color: var(--gold); }
+  .room-head h2 {
+    font-family: var(--serif); font-weight: 400;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    margin: .35rem 0 .8rem; letter-spacing: .01em;
+  }
+  .room-head p { max-width: 640px; color: var(--muted); line-height: 1.7; font-size: .98rem; margin: 0; }
+  .rule { margin-top: 2.2rem; width: min(100%, 340px); border-top: 1px solid rgba(201,162,75,.35); }
+
+  /* ---------- gallery grid ---------- */
+  .gallery {
+    max-width: 1120px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr; gap: 5.5rem 3.5rem;
+    align-items: start;
+  }
+  @media (min-width: 900px) { .gallery { grid-template-columns: 1fr 1fr; } }
+
+  /* offset alternate exhibits on wide screens, like a real gallery wall */
+  @media (min-width: 900px) {
+    .exhibit:nth-child(2) { margin-top: 9rem; }
+    .exhibit:nth-child(4) { margin-top: 14rem; }
+    .exhibit:nth-child(6) { margin-top: 2rem; }
+  }
+
+  /* spotlights on the wall above each frame */
+  .exhibit { position: relative; cursor: zoom-in; }
+  .exhibit::before { /* wall spotlight */
+    content:""; position:absolute; top:-96px; left:0; right:0; height: 96px;
+    background: radial-gradient(ellipse 70% 100% at 50% 0%, rgba(244,214,140,.20), transparent 75%);
+    pointer-events: none;
+  }
+  .exhibit::after { /* spotlight cone */
+    content:""; position:absolute; top:0; left:50%; transform: translateX(-50%);
+    width: 70%; height: 12px; border-bottom: 2px solid rgba(244,214,140,.5);
+    border-radius: 0 0 999px 999px;
+    opacity: 0; transition: opacity .4s ease;
+    filter: blur(1.5px);
+  }
+  .exhibit:hover::after { opacity: 1; }
+
+  .frame {
+    position: relative;
+    background: linear-gradient(180deg, var(--frame-2), var(--frame) 55%, #332518);
+    padding: 15px;
+    box-shadow:
+      0 0 0 1px #63503b,
+      0 2px 4px rgba(0,0,0,.6),
+      0 40px 70px -32px rgba(0,0,0,.85);
+    transition: box-shadow .5s ease, filter .5s ease;
+  }
+  .frame::before {
+    content:""; position:absolute; inset: 9px;
+    border: 1px solid rgba(214,176,94,.5);
+    pointer-events:none;
+  }
+  .frame::after { /* varnished glass */
+    content:""; position:absolute; inset: 24px;
+    border-bottom-left-radius: 999px;
+    background: linear-gradient(115deg, rgba(255,255,255,.12), transparent 24%);
+    pointer-events:none; z-index: 2;
+    transition: opacity .5s ease;
+  }
+  .exhibit:hover .frame::after { opacity: 0; }
+  .exhibit:hover .frame {
+    box-shadow:
+      0 0 0 1px #63503b,
+      0 0 0 3px rgba(201,162,75,.22),
+      0 40px 90px -30px rgba(0,0,0,.9),
+      0 0 42px rgba(201,162,75,.06);
+    filter: brightness(1.03);
+  }
+
+  .canvas {
+    position: relative; overflow: hidden;
+    aspect-ratio: 4 / 3;
+    background: #000;
+  }
+  .canvas-art { position: absolute; inset: 0; }
+  .canvas-art svg { width: 100%; height: 100%; display: block; }
+
+  /* plaque */
+  .plaque {
+    margin-top: 1.9rem; text-align: center; line-height: 1.6;
+    font-size: .78rem; color: var(--muted);
+    max-width: 46rem; margin-left:auto; margin-right:auto;
+  }
+  .plaque h3 {
+    font-family: var(--serif); font-weight: 500; font-size: 1.14rem;
+    color: var(--ivory); letter-spacing: .08em; text-transform: uppercase;
+    margin: 0 0 .35rem;
+  }
+  .plaque .meta { letter-spacing: .26em; text-transform: uppercase; font-size: .62rem; color: var(--gold-2); margin-bottom: .55rem; }
+  .plaque .note { font-family: var(--serif); font-style: italic; font-size: .84rem; color: var(--ivory); opacity: .62; display: block; margin-top: .45rem; }
+  .view {
+    position:absolute; bottom: 26px; right: 26px; z-index: 3;
+    background: rgba(15,13,9,.78); border: 1px solid rgba(201,162,75,.45);
+    color: var(--gold-2); text-decoration: none;
+    font-size: .58rem; letter-spacing: .32em; text-transform: uppercase;
+    padding: .55rem .95rem;
+    transition: all .35s ease;
+  }
+  .view:hover { background: var(--gold); color: #171208; border-color: var(--gold); }
+
+  /* ---------- lightbox ---------- */
+  .lightbox {
+    position: fixed; inset: 0; z-index: 150;
+    background: rgba(8,7,4,.94); backdrop-filter: blur(6px);
+    display: grid; place-items: center; padding: 2.5rem;
+    opacity: 0; pointer-events: none; transition: opacity .35s ease;
+  }
+  .lightbox.open { opacity: 1; pointer-events: all; }
+  .lightbox-inner { max-width: min(82vw, 940px); position: relative; transform: scale(1.02); transition: transform .45s cubic-bezier(.2,.7,.2,1); }
+  .lightbox.open .lightbox-inner { transform: scale(1); }
+  .lightbox-inner .frame { padding: 18px; }
+  .lightbox-inner .frame::after { opacity: 0; }
+  .lightbox-inner .frame::before { inset: 10px; border-color: rgba(214,176,94,.7); }
+  .lightbox-art { aspect-ratio: 4 / 3; position: relative; overflow:hidden; }
+  .lightbox-art .canvas-art { position: absolute; inset: 0; }
+  .lightbox-art .canvas-art svg { width:100%; height:100%; }
+  .lightbox-cap { text-align:center; margin-top: 2rem; }
+  .lightbox-cap h2 { font-family: var(--serif); font-weight: 400; font-size: 1.7rem; letter-spacing: .12em; text-transform: uppercase; margin: 0 0 .4rem; }
+  .lightbox-cap .meta { letter-spacing: .3em; font-size: .64rem; text-transform: uppercase; color: var(--gold-2); }
+  .lightbox-cap p { max-width: 52rem; margin: 1rem auto 0; color: var(--muted); line-height: 1.75; font-size: 1rem; font-family: var(--serif); }
+  .close {
+    position: absolute; top: -5.4rem; left: 50%; transform: translateX(-50%);
+    background: none; border: 1px solid rgba(201,162,75,.5);
+    color: var(--gold-2); font-size: .6rem; letter-spacing: .36em; text-transform: uppercase;
+    padding: .5rem 1rem; cursor: pointer; transition: all .3s ease;
+  }
+  .close:hover { color: var(--ivory); border-color: var(--ivory); }
+
+  /* ---------- colophon ---------- */
+  footer {
+    border-top: 1px solid rgba(201,162,75,.3);
+    padding: 4rem 2rem 3rem;
+  }
+  .colophon { max-width: 960px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 2.5rem 4rem; }
+  .colophon h4 { font-family: var(--serif); font-size: 1rem; letter-spacing: .24em; text-transform: uppercase; color: var(--gold-2); margin: 0 0 .9rem; font-weight: 500; }
+  .colophon p, .colophon li { color: var(--muted); font-size: .88rem; line-height: 1.75; }
+  .colophon ul { list-style: none; padding: 0; margin: 0; }
+  .colophon li::before { content:"— "; color: var(--gold); }
+  .credit { margin-top: 2.4rem; text-align: center; font-size: .6rem; letter-spacing: .4em; text-transform: uppercase; color: var(--muted); }
+
+  /* ---------- motion ---------- */
+  .halo { animation: breathe 6s ease-in-out infinite; transform-origin: center; }
+  @keyframes breathe { 0%,100% { opacity:.85; } 50% { opacity:1; } }
+  .fog { animation: drift 16s ease-in-out infinite alternate; }
+  .fog2 { animation: drift2 12s ease-in-out infinite alternate; }
+  @keyframes drift  { from { transform: translateX(-28px); } to { transform: translateX(28px); } }
+  @keyframes drift2 { from { transform: translateX(28px);  } to { transform: translateX(-28px); } }
+  .star { animation: twinkle 3.2s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100% { opacity:.15; } 50% { opacity:1; } }
+  .tw1 { animation-delay: -1.1s; } .tw2 { animation-delay: -2.2s; } .tw3 { animation-delay: -.5s; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+  }
+
+  @media (max-width: 860px) {
+    nav { gap: .9rem; font-size: .6rem; }
+    .bar { flex-direction: column; gap: .8rem; }
+    nav { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="progress" id="progress"></div>
+  <div class="bar">
+    <a class="brand" href="#atrium">Lumen<span small>A Museum of Vector Light</span></a>
+    <nav>
+      <a href="#atrium">Atrium</a>
+      <a href="#water">Water</a>
+      <a href="#geometry">Geometry</a>
+      <a href="#night">Night</a>
+      <a href="#colophon">Colophon</a>
+    </nav>
+  </div>
+</header>
+
+<!-- ==================== ATRIUM ==================== -->
+<section id="atrium">
+  <p class="kicker">Now on View · Permanent Collection</p>
+  <h1>The Lumen<br>Museum</h1>
+  <p class="sub">Six works painted with nothing but HTML, CSS and SVG — every edge a line, every glow a gradient. No photographs, no brushes, no pixels: only vector, rendered live on your screen.</p>
+  <div class="divider"></div>
+  <div class="admissions">
+    <span>Admission <b>Free</b></span>
+    <span>Open <b>00:00 — 24:00</b></span>
+    <span>Works on view <b>6</b></span>
+  </div>
+  <p class="down">Descend to the galleries ↓</p>
+</section>
+
+<!-- ==================== ROOM I — WATER & LIGHT ==================== -->
+<section class="room" id="water">
+  <div class="room-head">
+    <p class="num">Room I</p>
+    <h2>Water &amp; Light</h2>
+    <p>Studies in reflection and current. Each painting is built from layered gradients and vector paths — the water is a single rectangle with a memory of the sky.</p>
+    <div class="rule"></div>
+  </div>
+
+  <div class="gallery">
+
+    <figure class="exhibit"
+      data-title="First Light on the Glass Lake"
+      data-meta="2026 · Pure CSS + SVG · 60 × 45 cm"
+      data-note="A dawn painted in six gradients. The sun is a single circle; the lake, its memory.">
+      <div class="frame">
+        <div class="canvas">
+          <div class="canvas-art">
+            <svg viewBox="0 0 900 600" preserveAspectRatio="none" role="img" aria-label="A golden sun setting behind three mountain ridges, reflected in a dark blue lake.">
+              <defs>
+                <linearGradient id="lSky" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#10182f"/>
+                  <stop offset=".4" stop-color="#2c4576"/>
+                  <stop offset=".6" stop-color="#c08356"/>
+                  <stop offset=".67" stop-color="#f6b878"/>
+                  <stop offset=".74" stop-color="#ffe9c7"/>
+                  <stop offset="1" stop-color="#e2a56b"/>
+                </linearGradient>
+                <linearGradient id="lWater" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#f2b57a" stop-opacity=".85"/>
+                  <stop offset=".22" stop-color="#746a96"/>
+                  <stop offset="1" stop-color="#0b1330"/>
+                </linearGradient>
+                <radialGradient id="lSunGlow">
+                  <stop offset="0" stop-color="#fff6dc" stop-opacity=".9"/>
+                  <stop offset=".3" stop-color="#ffd88e" stop-opacity=".55"/>
+                  <stop offset="1" stop-color="#ffcf7d" stop-opacity="0"/>
+                </radialGradient>
+                <linearGradient id="lRefl" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffe7bf" stop-opacity=".9"/>
+                  <stop offset="1" stop-color="#ffe7bf" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <rect width="900" height="600" fill="url(#lSky)"/>
+              <g fill="#ffffff">
+                <circle cx="118" cy="58" r="1.5" opacity=".5"/><circle cx="258" cy="30" r="1" opacity=".35"/>
+                <circle cx="505" cy="55" r="1.4" opacity=".5"/><circle cx="700" cy="24" r="1" opacity=".3"/>
+                <circle cx="812" cy="72" r="1.6" opacity=".6"/><circle cx="420" cy="118" r="1" opacity=".35"/>
+                <circle cx="630" cy="150" r="1.2" opacity=".4"/>
+              </g>
+              <circle class="halo" cx="292" cy="296" r="170" fill="url(#lSunGlow)"/>
+              <circle cx="292" cy="296" r="37" fill="#fff7dd"/>
+              <polygon points="0,362 88,300 176,340 268,262 392,336 502,270 624,338 748,296 900,352 900,362" fill="#33518a"/>
+              <polygon points="0,362 148,362 216,266 332,362 454,250 562,362 700,290 842,362 900,362" fill="#223a68"/>
+              <polygon points="0,362 238,362 302,240 424,362 548,362 754,304 900,362" fill="#172743"/>
+              <rect y="362" width="900" height="238" fill="url(#lWater)"/>
+              <ellipse cx="292" cy="392" rx="50" ry="72" fill="url(#lRefl)" opacity=".55"/>
+              <ellipse cx="292" cy="466" rx="28" ry="30" fill="url(#lRefl)" opacity=".35"/>
+              <g stroke="#ffe6c2" stroke-width="1.5" stroke-linecap="round">
+                <line x1="96" y1="402" x2="470" y2="402" opacity=".34"/>
+                <line x1="430" y1="432" x2="820" y2="432" opacity=".22"/>
+                <line x1="210" y1="488" x2="660" y2="488" opacity=".24"/>
+                <line x1="50" y1="546" x2="390" y2="546" opacity=".16"/>
+                <line x1="540" y1="578" x2="880" y2="578" opacity=".18"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <a href="#" class="view" data-zoom aria-label="View First Light on the Glass Lake in detail">view</a>
+      </div>
+      <figcaption class="plaque">
+        <h3>First Light on the Glass Lake</h3>
+        <p class="meta">2026 · Pure CSS + SVG · 60 × 45 cm</p>
+        <span class="note">A dawn painted in six gradients — the sun a single circle, the lake its memory.</span>
+      </figcaption>
+    </figure>
+
+    <figure class="exhibit"
+      data-title="Tidal Geometry No. 3"
+      data-meta="2026 · Pure CSS + SVG · 66 × 50 cm"
+      data-note="Five currents of paint, one small sun. A score for the sea, written in stroke and path.">
+      <div class="frame">
+        <div class="canvas">
+          <div class="canvas-art">
+            <svg viewBox="0 0 900 640" preserveAspectRatio="none" role="img" aria-label="A gold sun and concentric rings above five wavy colored bands on a deep teal ground.">
+              <defs>
+                <pattern id="gHair" width="30" height="30" patternUnits="userSpaceOnUse">
+                  <path d="M15 0 V30" stroke="#eef7f5" stroke-opacity=".05"/>
+                </pattern>
+              </defs>
+              <rect width="900" height="640" fill="#0a252e"/>
+              <rect y="300" width="900" height="340" fill="url(#gHair)"/>
+              <circle cx="622" cy="172" r="168" fill="none" stroke="#f2c166" stroke-opacity=".14" stroke-width="1.5"/>
+              <circle cx="622" cy="172" r="122" fill="none" stroke="#f2c166" stroke-opacity=".24" stroke-width="1.5"/>
+              <circle cx="622" cy="172" r="80"  fill="none" stroke="#f2c166" stroke-opacity=".4"  stroke-width="2"/>
+              <circle cx="622" cy="172" r="44"  fill="#f2c166"/>
+              <circle cx="168" cy="120" r="14" fill="#c23b2e" opacity=".9"/>
+              <rect x="58" y="104" width="24" height="24" fill="#27467a"/>
+              <line x1="0" y1="288" x2="900" y2="288" stroke="#f2c166" stroke-width="1.6" stroke-opacity=".4"/>
+              <g fill="none" stroke-linecap="round">
+                <path d="M-20,336 C 140,250 340,250 460,336 S 740,470 920,336" stroke="#e8d9b0" stroke-width="13" stroke-opacity=".72"/>
+                <path d="M-20,406 C 140,320 340,320 460,406 S 740,540 920,406" stroke="#d98a5e" stroke-width="13" stroke-opacity=".82"/>
+                <path d="M-20,476 C 140,390 340,390 460,476 S 740,610 920,476" stroke="#62baa6" stroke-width="13" stroke-opacity=".88"/>
+                <path d="M-20,546 C 140,460 340,460 460,546 S 740,680 920,546" stroke="#f2c166" stroke-width="13" stroke-opacity=".92"/>
+                <path d="M-20,616 C 140,530 340,530 460,616 S 740,750 920,616" stroke="#e8d9b0" stroke-width="13" stroke-opacity=".5"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <a href="#" class="view" data-zoom aria-label="View Tidal Geometry No. 3 in detail">view</a>
+      </div>
+      <figcaption class="plaque">
+        <h3>Tidal Geometry No. 3</h3>
+        <p class="meta">2026 · Pure CSS + SVG · 66 × 50 cm</p>
+        <span class="note">Five currents of paint, one small sun — a score for the sea, written in stroke and path.</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ==================== ROOM II — GEOMETRY & ORDER ==================== -->
+<section class="room" id="geometry">
+  <div class="room-head">
+    <p class="num">Room II</p>
+    <h2>Geometry &amp; Order</h2>
+    <p>Where feeling submits to the compass. Circles, bands and a rule line — the quiet discipline that every gradient needs behind it.</p>
+    <div class="rule"></div>
+  </div>
+
+  <div class="gallery">
+
+    <figure class="exhibit"
+      data-title="Construct for an Ochre Sun"
+      data-meta="2026 · Pure CSS + SVG · 66 × 50 cm"
+      data-note="An exercise in restraint: five shapes, one rule. The ochre sun was placed last, and the painting forgave it.">
+      <div class="frame">
+        <div class="canvas">
+          <div class="canvas-art">
+            <svg viewBox="0 0 900 640" preserveAspectRatio="none" role="img" aria-label="An abstract composition with an ochre circle, a diagonal blue band, a red disc and black triangle on a cream ground.">
+              <rect width="900" height="640" fill="#f3ecd9"/>
+              <rect x="26" y="26" width="848" height="588" fill="none" stroke="#231c10" stroke-width="2"/>
+              <line x1="64" y1="606" x2="836" y2="606" stroke="#231c10" stroke-width="3"/>
+              <line x1="644" y1="36" x2="836" y2="36" stroke="#231c10" stroke-width="3"/>
+              <g transform="rotate(-32 450 320)">
+                <rect x="398" y="-440" width="104" height="1520" fill="#24427a"/>
+              </g>
+              <circle cx="590" cy="300" r="152" fill="#c98f2c"/>
+              <circle cx="590" cy="300" r="152" fill="none" stroke="#231c10" stroke-width="5"/>
+              <circle cx="300" cy="150" r="74" fill="#c23b2e"/>
+              <circle cx="300" cy="150" r="74" fill="none" stroke="#231c10" stroke-width="3"/>
+              <circle cx="796" cy="470" r="44" fill="#24427a"/>
+              <polygon points="186,478 326,478 256,354" fill="#231c10"/>
+              <rect x="658" y="440" width="26" height="26" fill="#231c10"/>
+              <circle cx="232" cy="548" r="10" fill="#c98f2c"/>
+            </svg>
+          </div>
+        </div>
+        <a href="#" class="view" data-zoom aria-label="View Construct for an Ochre Sun in detail">view</a>
+      </div>
+      <figcaption class="plaque">
+        <h3>Construct for an Ochre Sun</h3>
+        <p class="meta">2026 · Pure CSS + SVG · 66 × 50 cm</p>
+        <span class="note">An exercise in restraint: five shapes, one rule. The sun was placed last.</span>
+      </figcaption>
+    </figure>
+
+    <figure class="exhibit"
+      data-title="Olympus — Concentric Sun"
+      data-meta="2026 · Pure CSS + SVG · 60 × 45 cm"
+      data-note="Six rings, thirty-tick dials, one core of light. A compass reading, taken from the centre of the room.">
+      <div class="frame">
+        <div class="canvas">
+          <div class="canvas-art">
+            <svg viewBox="0 0 900 600" preserveAspectRatio="none" role="img" aria-label="Concentric gold rings and dashed dials around a radiant sun on a dark maroon ground.">
+              <defs>
+                <radialGradient id="oCore">
+                  <stop offset="0" stop-color="#fff4c7"/>
+                  <stop offset=".5" stop-color="#f0bf5c"/>
+                  <stop offset="1" stop-color="#d0942e"/>
+                </radialGradient>
+                <radialGradient id="oGlow">
+                  <stop offset="0" stop-color="#ffd87e" stop-opacity=".5"/>
+                  <stop offset="1" stop-color="#ffd87e" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="900" height="600" fill="#230d11"/>
+              <rect width="900" height="600" fill="url(#oGlow)" opacity=".5" style="display:none"/>
+              <circle cx="450" cy="300" r="380" fill="none" stroke="#c9a24b" stroke-width="1" stroke-opacity=".22" stroke-dasharray="2 12" stroke-linecap="round"/>
+              <circle cx="450" cy="300" r="318" fill="none" stroke="#e4c878" stroke-width="1.8" stroke-opacity=".75"/>
+              <circle cx="450" cy="300" r="318" fill="none" stroke="#e4c878" stroke-width="14" stroke-opacity=".05"/>
+              <circle cx="450" cy="300" r="258" fill="none" stroke="#c9a24b" stroke-width="1.4" stroke-opacity=".5" stroke-dasharray="3 18" stroke-linecap="round"/>
+              <circle cx="450" cy="300" r="198" fill="none" stroke="#e4c878" stroke-width="1" stroke-opacity=".3"/>
+              <circle cx="450" cy="300" r="152" fill="none" stroke="#c9a24b" stroke-width="2" stroke-opacity=".6"/>
+              <circle class="halo" cx="450" cy="300" r="96" fill="url(#oGlow)"/>
+              <circle cx="450" cy="300" r="54" fill="url(#oCore)"/>
+              <circle cx="450" cy="300" r="54" fill="none" stroke="#8f6d24" stroke-width="2" stroke-opacity=".7"/>
+              <circle cx="450" cy="300" r="26" fill="#fff0c2" opacity=".9"/>
+              <line x1="450" y1="196" x2="450" y2="232" stroke="#8f6d24" stroke-width="2"/>
+              <line x1="450" y1="368" x2="450" y2="404" stroke="#8f6d24" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+        <a href="#" class="view" data-zoom aria-label="View Olympus in detail">view</a>
+      </div>
+      <figcaption class="plaque">
+        <h3>Olympus — Concentric Sun</h3>
+        <p class="meta">2026 · Pure CSS + SVG · 60 × 45 cm</p>
+        <span class="note">Six rings, a ticked dial, one core of light — a compass reading from the centre of the room.</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ==================== ROOM III — NIGHT STUDIES ==================== -->
+<section class="room" id="night">
+  <div class="room-head">
+    <p class="num">Room III</p>
+    <h2>Night Studies</h2>
+    <p>For the quiet hours. A moon that does not twinkle, a sky full of small ones, and a forest that holds its breath.</p>
+    <div class="rule"></div>
+  </div>
+
+  <div class="gallery">
+
+    <figure class="exhibit"
+      data-title="Nocturne for a Quiet Moon"
+      data-meta="2026 · Pure CSS + SVG · 66 × 50 cm"
+      data-note="The moon does not twinkle; that work belongs to the smaller lights. Forty-one stars, each a circle with a temperature.">
+      <div class="frame">
+        <div class="canvas">
+          <div class="canvas-art">
+            <svg viewBox="0 0 900 640" preserveAspectRatio="none" role="img" aria-label="A large full moon upper right, a band of stars across a deep indigo sky, and a black hill with trees at the bottom.">
+              <defs>
+                <linearGradient id="nSky" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#080c1e"/>
+                  <stop offset=".62" stop-color="#111a3b"/>
+                  <stop offset="1" stop-color="#1d2654"/>
+                </linearGradient>
+                <radialGradient id="nHalo">
+                  <stop offset="0" stop-color="#f5eed2" stop-opacity=".5"/>
+                  <stop offset="1" stop-color="#f5eed2" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="900" height="640" fill="url(#nSky)"/>
+              <ellipse cx="330" cy="230" rx="290" ry="72" transform="rotate(-24 330 230)" fill="#c9c3e4" opacity=".1"/>
+              <circle cx="704" cy="150" r="130" fill="url(#nHalo)"/>
+              <circle cx="704" cy="150" r="48" fill="#f6eed2"/>
+              <circle cx="704" cy="150" r="48" fill="none" stroke="#2a2e58" stroke-width="1" stroke-opacity=".18"/>
+              <circle cx="684" cy="138" r="4.6" fill="#e3d9bb" opacity=".85"/>
+              <circle cx="720" cy="158" r="3" fill="#e3d9bb" opacity=".7"/>
+              <circle cx="706" cy="168" r="2.6" fill="#e3d9bb" opacity=".65"/>
+              <g fill="#ffffff">
+                <circle class="star tw1" cx="64" cy="72" r="1.8"/>
+                <circle cx="112" cy="26" r="1"/>
+                <circle class="star tw2" cx="186" cy="112" r="2.4"/>
+                <circle cx="240" cy="44" r="1.1"/>
+                <circle class="star" cx="300" cy="150" r="1.5"/>
+                <circle cx="352" cy="58" r="1"/>
+                <circle class="star tw1" cx="408" cy="196" r="1.9"/>
+                <circle cx="456" cy="62" r="1.2"/>
+                <circle class="star tw3" cx="508" cy="138" r="2.2"/>
+                <circle cx="562" cy="48" r="1"/>
+                <circle class="star tw2" cx="612" cy="178" r="1.7"/>
+                <circle cx="630" cy="312" r="1"/>
+                <circle cx="680" cy="332" r="1.1"/>
+                <circle class="star tw1" cx="748" cy="306" r="1.9"/>
+                <circle cx="820" cy="192" r="1.4"/>
+                <circle cx="846" cy="64" r="1.6"/>
+                <circle class="star tw3" cx="876" cy="252" r="1.3"/>
+                <circle cx="150" cy="326" r="1"/>
+                <circle class="star tw2" cx="218" cy="392" r="1.6"/>
+                <circle cx="296" cy="318" r="1.1"/>
+                <circle class="star" cx="366" cy="410" r="1.8"/>
+                <circle cx="442" cy="306" r="1"/>
+                <circle class="star tw1" cx="504" cy="438" r="1.4"/>
+                <circle cx="588" cy="364" r="1.1"/>
+                <circle class="star tw3" cx="662" cy="464" r="1.7"/>
+                <circle cx="738" cy="414" r="1"/>
+                <circle class="star tw2" cx="812" cy="512" r="1.5"/>
+                <circle cx="856" cy="356" r="1.1"/>
+                <circle class="star tw1" cx="96" cy="462" r="1.6"/>
+                <circle cx="176" cy="548" r="1.2"/>
+                <circle class="star tw3" cx="252" cy="600" r="1.4"/>
+                <circle cx="340" cy="536" r="1"/>
+                <circle class="star tw2" cx="430" cy="588" r="1.8"/>
+                <circle cx="512" cy="524" r="1"/>
+                <circle class="star" cx="602" cy="578" r="1.3"/>
+                <circle cx="686" cy="528" r="1.1"/>
+                <circle class="star tw1" cx="762" cy="592" r="1.6"/>
+                <circle cx="848" cy="616" r="1.3"/>
+              </g>
+              <polygon points="0,640 0,586 96,528 176,574 266,512 354,566 462,508 562,570 654,514 750,572 834,520 900,578 900,640" fill="#05080f"/>
+              <g fill="#070c1a">
+                <polygon points="52,572 70,512 88,572"/>
+                <polygon points="82,564 97,500 112,564"/>
+                <polygon points="138,558 156,492 174,558"/>
+                <polygon points="300,552 318,494 336,552"/>
+                <polygon points="338,558 352,520 366,558"/>
+                <polygon points="470,556 488,494 506,556"/>
+                <polygon points="606,554 622,506 638,554"/>
+                <polygon points="700,548 718,492 736,548"/>
+                <polygon points="738,548 752,518 766,548"/>
+                <polygon points="838,560 854,506 870,560"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <a href="#" class="view" data-zoom aria-label="View Nocturne for a Quiet Moon in detail">view</a>
+      </div>
+      <figcaption class="plaque">
+        <h3>Nocturne for a Quiet Moon</h3>
+        <p class="meta">2026 · Pure CSS + SVG · 66 × 50 cm</p>
+        <span class="note">The moon does not twinkle; that work belongs to the smaller lights.</span>
+      </figcaption>
+    </figure>
+
+    <figure class="exhibit"
+      data-title="Cedar &amp; Fog"
+      data-meta="2026 · Pure CSS + SVG · 60 × 45 cm"
+      data-note="Five rows of cedars, each closer and darker than the last. The fog moves slowly, and the painting is not finished until you look away.">
+      <div class="frame">
+        <div class="canvas">
+          <div class="canvas-art">
+            <svg viewBox="0 0 900 640" preserveAspectRatio="none" role="img" aria-label="Layers of evergreen trees receding into pale fog, darkest and largest in the foreground.">
+              <defs>
+                <linearGradient id="fSky" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#dde7e7"/>
+                  <stop offset=".55" stop-color="#b9c6c9"/>
+                  <stop offset="1" stop-color="#8fa0a8"/>
+                </linearGradient>
+                <linearGradient id="fFog" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ecf3f4" stop-opacity="0"/>
+                  <stop offset=".5" stop-color="#ecf3f4" stop-opacity=".85"/>
+                  <stop offset="1" stop-color="#ecf3f4" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <rect width="900" height="640" fill="url(#fSky)"/>
+              <!-- layer 1, far -->
+              <g fill="#7e93a0" opacity=".95">
+                <polygon points="58,436 82,352 106,436"/><polygon points="136,430 160,344 184,430"/>
+                <polygon points="228,438 252,358 276,438"/><polygon points="342,430 364,338 386,430"/>
+                <polygon points="456,436 478,362 500,436"/><polygon points="574,428 598,346 622,428"/>
+                <polygon points="686,434 708,358 730,434"/><polygon points="798,430 820,354 842,430"/>
+              </g>
+              <rect class="fog2" x="0" y="428" width="900" height="90" fill="url(#fFog)"/>
+              <!-- layer 2 -->
+              <g fill="#6a8390">
+                <polygon points="18,492 52,388 86,492"/><polygon points="176,496 208,396 240,496"/>
+                <polygon points="338,488 368,382 398,488"/><polygon points="486,494 516,392 546,494"/>
+                <polygon points="648,486 676,378 704,486"/><polygon points="802,494 830,396 858,494"/>
+              </g>
+              <rect class="fog" x="0" y="488" width="900" height="100" fill="url(#fFog)"/>
+              <!-- layer 3 -->
+              <g fill="#526b77">
+                <polygon points="74,556 116,420 158,556"/><polygon points="274,560 312,426 350,560"/>
+                <polygon points="474,552 510,414 546,552"/><polygon points="674,560 712,424 750,560"/>
+                <polygon points="828,554 864,432 900,554"/>
+              </g>
+              <rect class="fog2" x="0" y="552" width="900" height="100" fill="url(#fFog)"/>
+              <!-- layer 4 -->
+              <g fill="#3a5460">
+                <polygon points="-28,640 18,470 64,640"/><polygon points="170,640 218,466 266,640"/>
+                <polygon points="374,640 418,458 462,640"/><polygon points="560,640 606,464 652,640"/>
+                <polygon points="748,640 796,470 844,640"/><polygon points="886,640 922,466 900,640"/>
+              </g>
+              <rect class="fog" x="0" y="628" width="900" height="40" fill="url(#fFog)"/>
+              <!-- layer 5, nearest -->
+              <g fill="#1f3340">
+                <polygon points="92,640 152,362 212,640"/><polygon points="552,640 614,366 674,640"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+        <a href="#" class="view" data-zoom aria-label="View Cedar and Fog in detail">view</a>
+      </div>
+      <figcaption class="plaque">
+        <h3>Cedar &amp; Fog</h3>
+        <p class="meta">2026 · Pure CSS + SVG · 60 × 45 cm</p>
+        <span class="note">Five rows of cedars, each closer and darker than the last. The fog moves.</span>
+      </figcaption>
+    </figure>
+
+  </div>
+</section>
+
+<!-- ==================== COLOPHON ==================== -->
+<section id="colophon" class="room" style="padding-bottom:5rem">
+  <div class="colophon">
+    <div>
+      <h4>On View</h4>
+      <ul>
+        <li>First Light on the Glass Lake</li>
+        <li>Tidal Geometry No. 3</li>
+        <li>Construct for an Ochre Sun</li>
+        <li>Olympus — Concentric Sun</li>
+        <li>Nocturne for a Quiet Moon</li>
+        <li>Cedar &amp; Fog</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Medium</h4>
+      <p>Every work in this collection is composed of HTML structure, CSS gradients, and inline SVG paths. No bitmap images, no external assets — the museum ships in a single file, the way the paintings were made.</p>
+    </div>
+    <div>
+      <h4>Visitor Note</h4>
+      <p>Look closely. The suns breathe, the stars blink, the fog crosses the floor of the Cedar room. The museum never closes — but you may leave whenever you like.</p>
+    </div>
+  </div>
+  <p class="credit">The Lumen Museum · Permanent Collection of One Artist · Rendered live in your browser</p>
+</section>
+
+<!-- ==================== LIGHTBOX ==================== -->
+<div class="lightbox" id="lightbox" hidden>
+  <div class="lightbox-inner">
+    <button class="close" id="lightboxClose" aria-label="Close view">Close ×</button>
+    <div class="frame">
+      <div class="lightbox-art"><div class="canvas-art" id="lightboxArt"></div></div>
+    </div>
+    <div class="lightbox-cap">
+      <h2 id="lbTitle"></h2>
+      <p class="meta" id="lbMeta"></p>
+      <p id="lbNote"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ---------- lightbox ---------- */
+  const lightbox = document.getElementById('lightbox');
+  const lbArt = document.getElementById('lightboxArt');
+  const lbTitle = document.getElementById('lbTitle');
+  const lbMeta = document.getElementById('lbMeta');
+  const lbNote = document.getElementById('lbNote');
+
+  function openExhibit(figure) {
+    const src = figure.querySelector('.canvas-art');
+    lbArt.innerHTML = src.innerHTML;
+    lbTitle.textContent = figure.dataset.title;
+    lbMeta.textContent = figure.dataset.meta;
+    lbNote.textContent = figure.dataset.note;
+    lightbox.hidden = false;
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => lightbox.classList.add('open'));
+  }
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    document.body.style.overflow = '';
+    setTimeout(() => { lightbox.hidden = true; lbArt.innerHTML = ''; }, 300);
+  }
+  document.querySelectorAll('[data-zoom]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      openExhibit(a.closest('.exhibit'));
+    });
+  });
+  lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+  document.getElementById('lightboxClose').addEventListener('click', closeLightbox);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !lightbox.hidden) closeLightbox();
+  });
+
+  /* ---------- nav active state + scroll progress ---------- */
+  const navLinks = [...document.querySelectorAll('nav a')];
+  const sections = navLinks.map(a => document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
+  const progress = document.getElementById('progress');
+  function onScroll() {
+    const scrollY = window.scrollY, docH = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.width = (scrollY / Math.max(docH, 1) * 100) + '%';
+    let active = null, y = window.scrollY + window.innerHeight * 0.4;
+    sections.forEach(s => { if (s && s.getBoundingClientRect().top <= y && s.getBoundingClientRect().bottom >= y) active = s; });
+    if (!active && scrollY > 120) { const last = sections[sections.length - 1]; if (last && scrollY > last.offsetTop - 300) active = last; }
+    navLinks.forEach(a => a.classList.toggle('active', !!active && a.getAttribute('href').slice(1) === active.id));
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+
+  /* ---------- subtle pointer parallax on the canvases ---------- */
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduceMotion) {
+    document.querySelectorAll('.canvas').forEach(c => {
+      const art = c.querySelector('.canvas-art');
+      if (!art) return;
+      art.style.transition = 'transform .7s cubic-bezier(.2,.7,.2,1)';
+      c.addEventListener('pointermove', e => {
+        const r = c.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        art.style.transform = `translate3d(${x * -9}px, ${y * -6}px, 0) scale(1.02)`;
+      });
+      c.addEventListener('pointerleave', () => { art.style.transform = 'translate3d(0,0,0) scale(1)'; });
+    });
+  }
+</script>
+</body>
+</html>
