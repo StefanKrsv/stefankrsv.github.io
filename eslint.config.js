@@ -8,7 +8,7 @@ export default defineConfig([
   {
     rules: {
       semi: ['error', 'always'],
-      quotes: ['error', 'single']
+      quotes: ['error', 'single', { avoidEscape: true }]
     },
     languageOptions: {
       globals: {
