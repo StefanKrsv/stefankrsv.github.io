@@ -12,7 +12,7 @@ lang: en
 languages: ["en", "fr"] # change these
 default_lang: "en"
 exclude_from_localization:
-  ["javascript", "images", "css", "public", "assets", "sitemap.xml"]
+  ["javascript", "images", "css", "public", "assets", "sitemap.xml", "luminous-abyss"]
 parallel_localization: false
 lang_from_path: true
 
