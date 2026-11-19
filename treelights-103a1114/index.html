@@ -6,12 +6,12 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#05070b">
+<meta name="theme-color" content="#080607">
 <title>Tree Lights Installer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305070b'/%3E%3Cg fill='%235cf2b0'%3E%3Ccircle cx='32' cy='12' r='4'/%3E%3Ccircle cx='26' cy='24' r='3'/%3E%3Ccircle cx='38' cy='26' r='3'/%3E%3Ccircle cx='22' cy='37' r='3'/%3E%3Ccircle cx='33' cy='39' r='3'/%3E%3Ccircle cx='43' cy='38' r='3'/%3E%3Ccircle cx='17' cy='50' r='3'/%3E%3Ccircle cx='28' cy='52' r='3'/%3E%3Ccircle cx='39' cy='52' r='3'/%3E%3Ccircle cx='49' cy='50' r='3'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/esptool-js@0.6.1/bundle.js" crossorigin>
 <style>
 :root {
@@ -147,6 +147,27 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
   .btn, .progress > div { transition: none; }
   .progress.indeterminate > div, .spinner { animation-duration: 3s; }
 }
+
+:root { --bg: #080607; --accent: #ff4d5e; --accent-ink: #fff; --muted: #a39a9c; --dim: #6b6265; }
+body::before { background-image: none; }
+body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(255,77,94,.08), transparent 70%); }
+.btn { color: #fff; box-shadow: 0 0 0 1px rgba(255,77,94,.6), 0 10px 34px rgba(255,77,94,.35); }
+.btn:hover { box-shadow: 0 0 0 1px rgba(255,77,94,.8), 0 14px 44px rgba(255,77,94,.45); }
+.brand i { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.specs { display: grid; grid-template-columns: auto 1fr; gap: 8px 22px; margin: 0 0 30px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: 400 13px/1.4 var(--mono); text-align: left; width: 100%; max-width: 380px; }
+.specs dt { color: var(--dim); text-transform: uppercase; letter-spacing: .12em; font-size: 11px; padding-top: 2px; }
+.specs dd { margin: 0; color: var(--text); }
+@media (min-width: 900px) {
+  main { max-width: 1160px; display: grid; grid-template-columns: 1.15fr 1fr; grid-template-rows: 1fr auto auto auto auto 1fr; column-gap: 56px; text-align: left; align-items: start; }
+  .stage, main:not([data-state="idle"]) .stage { grid-column: 1; grid-row: 1 / -1; height: min(80vh, 720px); min-height: 480px; align-self: center; }
+  h1 { grid-column: 2; grid-row: 2; font-size: 72px; font-weight: 700; letter-spacing: -0.045em; margin: 0 0 14px; }
+  .meta { grid-column: 2; grid-row: 3; display: none; }
+  .specs { grid-column: 2; grid-row: 4; }
+  .panel { grid-column: 2; grid-row: 5; align-items: flex-start; }
+  .panel .hint { text-align: left; }
+}
+@media (max-width: 899px) { .specs { display: none; } }
+
 </style>
 </head>
 <body>
@@ -162,7 +183,7 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
 <main id="main" data-state="idle">
   <div class="stage"><canvas id="tree" aria-hidden="true"></canvas></div>
   <h1>Tree Lights</h1>
-  <p class="meta" id="meta"></p>
+  <p class="meta" id="meta"></p><dl class="specs" id="specs"><dt data-i18n="spVersion">Version</dt><dd id="sp-v">&nbsp;</dd><dt data-i18n="spBoard">Board</dt><dd>ESP8266 &middot; NodeMCU</dd><dt data-i18n="spDate">Released</dt><dd id="sp-d">&nbsp;</dd></dl>
   <section class="panel" id="panel" aria-live="polite"></section>
 </main>
 
@@ -193,7 +214,8 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       cancel: "Cancel",
       downloading: "Downloading firmware…",
       erasing: "Erasing the board…",
-      writing: "Installing. Keep the cable plugged in.",
+      writing: "Installing…", keepPlugged: "Keep the cable plugged in.",
+      spVersion: "Version", spBoard: "Board", spDate: "Released",
       restarting: "Restarting the controller…",
       doneTitle: "Installed {v}",
       doneText: "The controller restarts by itself. Put it back in the tree and open its page as usual, or join the Wi-Fi ChristmasTree (password TreeLights2026) and go to http://tree.local.",
@@ -228,7 +250,8 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       cancel: "Annuleren",
       downloading: "Firmware downloaden…",
       erasing: "Bord wissen…",
-      writing: "Bezig met installeren. Laat de kabel aangesloten.",
+      writing: "Installeren…", keepPlugged: "Laat de kabel aangesloten.",
+      spVersion: "Versie", spBoard: "Bord", spDate: "Uitgebracht",
       restarting: "Controller herstarten…",
       doneTitle: "{v} geïnstalleerd",
       doneText: "De controller herstart vanzelf. Plaats hem terug in de boom en open de pagina zoals altijd, of verbind met de wifi ChristmasTree (wachtwoord TreeLights2026) en ga naar http://tree.local.",
@@ -263,7 +286,8 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       cancel: "Annuler",
       downloading: "Téléchargement du firmware…",
       erasing: "Effacement de la carte…",
-      writing: "Installation en cours. Laissez le câble branché.",
+      writing: "Installation…", keepPlugged: "Laissez le câble branché.",
+      spVersion: "Version", spBoard: "Carte", spDate: "Publiée",
       restarting: "Redémarrage du contrôleur…",
       doneTitle: "{v} installé",
       doneText: "Le contrôleur redémarre tout seul. Remettez-le dans le sapin et ouvrez sa page comme d'habitude, ou connectez-vous au Wi-Fi ChristmasTree (mot de passe TreeLights2026) et allez sur http://tree.local.",
@@ -321,12 +345,14 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
 
   function renderMeta() {
     if (manifest === null) { meta.textContent = ""; return; }
-    if (manifest === false) { meta.textContent = t("missing"); return; }
+    if (manifest === false) { meta.textContent = t("missing"); document.getElementById("sp-v").textContent = t("missing"); return; }
     var date = "";
     if (manifest.build_date) {
       try { date = new Date(manifest.build_date).toLocaleDateString(lang, { day: "numeric", month: "short", year: "numeric" }); } catch (e) { date = ""; }
     }
     meta.innerHTML = "<b>" + esc(versionLabel()) + "</b><span class=\"sep\">/</span>" + CHIP + (date ? "<span class=\"sep\">/</span>" + esc(date) : "");
+    document.getElementById("sp-v").textContent = versionLabel();
+    try { document.getElementById("sp-d").textContent = new Date(manifest.build_date).toLocaleDateString(lang, { day: "numeric", month: "long", year: "numeric" }); } catch (e) { /* no date */ }
   }
 
   var ICON_OK = '<svg class="ok" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="rgba(92,242,176,.14)" stroke="#5cf2b0" stroke-width="1.5"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#5cf2b0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -354,7 +380,8 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       var pct = S.pct == null ? null : Math.round(S.pct * 100);
       h = '<h2><span class="spinner"></span>' + esc(t(S.step)) + "</h2>" +
           '<div class="progress' + (pct == null ? " indeterminate" : "") + '"><div style="' + (pct == null ? "" : "width:" + pct + "%") + '"></div></div>' +
-          '<div class="stats"><span>' + (S.bytes ? "<b>" + Math.round(S.written / 1024) + "</b> / " + Math.round(S.bytes / 1024) + " KB" : "&nbsp;") + "</span><span>" + (pct == null ? "" : "<b>" + pct + "%</b>") + "</span></div>";
+          '<div class="stats"><span>' + (S.bytes ? "<b>" + Math.round(S.written / 1024) + "</b> / " + Math.round(S.bytes / 1024) + " KB" : "&nbsp;") + "</span><span>" + (pct == null ? "" : "<b>" + pct + "%</b>") + "</span></div>" +
+          '<p class="hint">' + esc(t("keepPlugged")) + "</p>";
     } else if (S.name === "done") {
       h = "<h2>" + ICON_OK + esc(t("doneTitle", { v: versionLabel() })) + "</h2><p>" + esc(t("doneText")) + "</p>" +
           '<div class="row"><button class="btn small" type="button" id="close">' + esc(t("close")) + "</button></div>";
@@ -504,6 +531,7 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
   var tree = (function () {
     var canvas = document.getElementById("tree"), ctx = canvas.getContext("2d");
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var TH = {"hue": 356, "spread": 8, "sat": 88, "light": 60, "edge": 25, "unlit": [215, 20, 55], "unlitB": 0.12, "dim": [38, 85, 74], "dimB": 0.18, "idle": ["christmas", "candle", "sweep"], "spin": 0.28, "ring": "255,77,94", "wire": "rgba(255,255,255,0.06)", "glow": 1.1};
     var N = 100, leds = [];
     var seed = 7;
     function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
@@ -512,7 +540,7 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       var y = Math.pow(f, 0.92);                       // 0 bottom .. 1 top
       var r = (1 - y) * 0.40 + 0.015 + (rnd() - 0.5) * 0.03;
       var a = f * Math.PI * 2 * 8.5 + (rnd() - 0.5) * 0.3;
-      leds.push({ x: Math.cos(a) * r, z: Math.sin(a) * r, y: y, tw: rnd() * Math.PI * 2 });
+      leds.push({ k: i, x: Math.cos(a) * r, z: Math.sin(a) * r, y: y, tw: rnd() * Math.PI * 2 });
     }
     var w = 0, h = 0, dpr = 1, rot = 0.6, last = 0, t0 = performance.now();
     var mode = { name: "idle" }, modeAt = 0, shown = 0;   // shown: eased progress
@@ -536,14 +564,14 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       if (n === "busy") {
         var lit = p.y <= shown + 0.001;
         var edge = Math.max(0, 1 - Math.abs(p.y - shown) * 14);
-        if (lit) return [hsl(152 + p.y * 30, 85, 62 + edge * 25), 0.9 + edge * 0.6];
-        return [[215, 20, 55], 0.12 + 0.05 * Math.sin(time * 2 + p.tw)];
+        if (lit) return [hsl(TH.hue + p.y * TH.spread, TH.sat, TH.light + edge * TH.edge), 0.9 + edge * 0.6];
+        return [TH.unlit, TH.unlitB + 0.05 * Math.sin(time * 2 + p.tw)];
       }
       if (n === "connecting" || n === "ready") {
         var scan = (Math.sin(time * 1.6) * 0.5 + 0.5) * 1.05 - 0.02;
         var d = Math.abs(p.y - scan);
         var b = Math.max(0, 1 - d * 9);
-        return [b > 0.05 ? hsl(152, 85, 55 + b * 25) : [40, 70, 70], 0.18 + b * 1.1];
+        return [b > 0.05 ? hsl(TH.hue, TH.sat, TH.light - 7 + b * TH.edge) : TH.dim, TH.dimB + b * 1.1];
       }
       if (n === "error") {
         return [[352, 90, 62], 0.35 + 0.3 * (Math.sin(time * 3) * 0.5 + 0.5)];
@@ -553,39 +581,44 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
         if (age < 5) {
           var ring = Math.max(0, 1 - Math.abs(p.y - ((age * 0.6) % 1.2)) * 6);
           var sp = Math.max(0, Math.sin(time * 9 + p.tw * 7)) * 0.5;
-          return [hsl(p.y * 300 + time * 120, 90, 62 + ring * 20), 0.75 + ring + sp];
+          return [hsl(p.y * 300 + time * 120, 90, TH.light + ring * 20), 0.75 + ring + sp];
         }
       }
-      // idle: rotate through a few effects, cross-fading
-      var cycle = 9, k = (time / cycle) | 0, ph = (time % cycle) / cycle;
-      var eff = k % 3;
+      // idle: rotate through the theme's effects, cross-fading
+      var list = TH.idle, cycle = 9, k = (time / cycle) | 0, ph = (time % cycle) / cycle;
+      var eff = list[k % list.length];
       var c = idleFx(eff, p, time);
-      if (ph > 0.88) {   // blend into the next effect
-        var c2 = idleFx((eff + 1) % 3, p, time), m = (ph - 0.88) / 0.12;
+      if (list.length > 1 && ph > 0.88) {
+        var c2 = idleFx(list[(k + 1) % list.length], p, time), m = (ph - 0.88) / 0.12;
         return m < 0.5 ? [c[0], c[1] * (1 - m) + c2[1] * m] : [c2[0], c[1] * (1 - m) + c2[1] * m];
       }
       return c;
     }
     function idleFx(eff, p, time) {
-      if (eff === 0) {   // rainbow rise
-        return [hsl(p.y * 260 - time * 70, 90, 62), 0.95];
-      }
-      if (eff === 1) {   // plane sweep through warm white
+      var L = TH.light;
+      if (eff === "sweep") {
         var ang = time * 0.9;
         var plane = p.x * Math.cos(ang) + (p.y - 0.5) * 0.6 * Math.sin(ang * 0.7) + p.z * Math.sin(ang);
         var b = Math.max(0, 1 - Math.abs(plane - Math.sin(time * 1.3) * 0.35) * 10);
-        return [b > 0.05 ? hsl(165 + b * 40, 90, 58 + b * 18) : [36, 90, 72], 0.35 + b * 1.1];
+        return [b > 0.05 ? hsl(TH.hue + 13 + b * 40, TH.sat, L - 4 + b * 18) : TH.dim, TH.dimB + 0.17 + b * 1.1];
       }
-      // candlelight twinkle
-      var fl = Math.sin(time * 3.1 + p.tw * 5) * 0.5 + Math.sin(time * 7.3 + p.tw * 11) * 0.25;
-      return [hsl(30 + fl * 8, 95, 60), 0.6 + fl * 0.35];
+      if (eff === "candle") {
+        var fl = Math.sin(time * 3.1 + p.tw * 5) * 0.5 + Math.sin(time * 7.3 + p.tw * 11) * 0.25;
+        return [hsl(30 + fl * 8, 95, L - 2), 0.6 + fl * 0.35];
+      }
+      if (eff === "christmas") {
+        var cols = [[356, 85, L - 6], [140, 70, L - 12], [38, 90, L + 12]];
+        var tw = Math.sin(time * 1.7 + p.tw * 3) * 0.5 + 0.5;
+        return [cols[p.k % 3], 0.55 + tw * 0.5];
+      }
+      return [TH.dim, 0.5];
     }
 
     function frame(now) {
       var time = (now - t0) / 1000;
       var dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
       last = now;
-      if (!reduce) rot += dt * 0.32;
+      if (!reduce) rot += dt * TH.spin;
       var target = mode.name === "busy" ? (mode.pct == null ? (mode.step === "restarting" ? 1 : 0) : mode.pct) : mode.name === "done" ? 1 : 0;
       shown += (target - shown) * Math.min(1, dt * 6 || 1);
 
@@ -598,7 +631,7 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       ctx.lineWidth = 1;
       for (var k = 0; k < 3; k++) {
         var rr = H * (0.26 + k * 0.12);
-        ctx.strokeStyle = "rgba(92,242,176," + (0.14 - k * 0.04) + ")";
+        ctx.strokeStyle = "rgba(" + TH.ring + "," + (0.14 - k * 0.04) + ")";
         ctx.setLineDash(k === 1 ? [3, 6] : []);
         ctx.beginPath(); ctx.ellipse(cx, base, rr, rr * tilt * 1.6, 0, 0, Math.PI * 2); ctx.stroke();
       }
@@ -613,7 +646,7 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       }
 
       // the wire, in string order
-      ctx.strokeStyle = "rgba(255,255,255,0.06)";
+      ctx.strokeStyle = TH.wire;
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (var j = 0; j < N; j++) { if (j) ctx.lineTo(pts[j].sx, pts[j].sy); else ctx.moveTo(pts[j].sx, pts[j].sy); }
@@ -624,7 +657,7 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
       for (var q = 0; q < N; q++) {
         var o = pts[q], c = shade(o.p, time), col = c[0], br = Math.max(0, c[1]);
         var depth = 0.55 + 0.45 * (1 - (o.z + 0.45) / 0.9);
-        var glowR = (H / 26) * o.s * (0.7 + br * 0.8);
+        var glowR = (H / 26) * TH.glow * o.s * (0.7 + br * 0.8);
         var a0 = Math.min(1, 0.55 * br * depth);
         var g = ctx.createRadialGradient(o.sx, o.sy, 0, o.sx, o.sy, glowR);
         g.addColorStop(0, hsla(col, a0));
