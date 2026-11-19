@@ -10,27 +10,22 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4 12 34h10L8 54h48L42 34h10z' fill='%2321a35b'/%3E%3Crect x='28' y='54' width='8' height='8' fill='%238a5a2b'/%3E%3Ccircle cx='32' cy='6' r='5' fill='%23ffd166'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
 <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
 <style>
 :root {
   --night: #0b1a2e;
   --night-2: #12284a;
-  --card: rgba(255, 255, 255, 0.07);
-  --card-line: rgba(255, 255, 255, 0.14);
   --text: #f4f1ea;
   --muted: #b9c3d3;
   --red: #d7263d;
   --red-2: #b81d32;
-  --green: #21a35b;
   --gold: #ffd166;
-  --snow: #ffffff;
 }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html, body { height: 100%; }
 body {
   margin: 0;
-  min-height: 100vh;
   color: var(--text);
   background: var(--night);
   font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -42,94 +37,43 @@ body::before {
 }
 #snow { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
-/* fairy-light garland across the top */
-.garland { position: relative; z-index: 1; width: 100%; height: 70px; display: block; }
+.garland { position: fixed; top: 0; left: 0; z-index: 1; width: 100%; height: 70px; display: block; }
 .garland .wire { fill: none; stroke: #1d3a2a; stroke-width: 2; }
-.garland .bulb { animation: twinkle 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center top; }
+.garland .bulb { animation: twinkle 2.4s ease-in-out infinite; }
 .garland .cap { fill: #5b6b62; }
 @keyframes twinkle { 0%, 100% { opacity: 1; filter: drop-shadow(0 0 6px currentColor); } 50% { opacity: .45; filter: none; } }
 
-main { position: relative; z-index: 1; max-width: 760px; margin: 0 auto; padding: 8px 16px 48px; }
-
-.lang { display: flex; justify-content: flex-end; gap: 4px; margin-bottom: 8px; }
+.lang { position: fixed; top: 76px; right: 16px; z-index: 2; display: flex; gap: 4px; }
 .lang button {
   font: inherit; font-size: 13px; color: var(--muted); background: transparent;
   border: 1px solid transparent; border-radius: 999px; padding: 2px 10px; cursor: pointer;
 }
-.lang button[aria-pressed="true"] { color: var(--text); border-color: var(--card-line); background: var(--card); }
+.lang button[aria-pressed="true"] { color: var(--text); border-color: rgba(255, 255, 255, 0.14); background: rgba(255, 255, 255, 0.07); }
 
-header { text-align: center; margin: 8px 0 28px; }
-.eyebrow { color: var(--gold); letter-spacing: .18em; text-transform: uppercase; font-size: 13px; font-weight: 600; margin: 0; }
+main {
+  position: relative; z-index: 1; min-height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 20px; padding: 110px 16px 48px; text-align: center;
+}
 h1 {
   font-family: Fraunces, Georgia, serif; font-weight: 700;
-  font-size: clamp(34px, 7vw, 54px); line-height: 1.08; margin: 8px 0 12px;
-  text-wrap: balance;
+  font-size: clamp(36px, 8vw, 56px); line-height: 1.08; margin: 0;
 }
-.lead { color: var(--muted); margin: 0 auto; max-width: 520px; text-wrap: pretty; }
-.version {
-  text-align: left;
-  display: inline-flex; align-items: center; gap: 8px; margin-top: 18px;
-  padding: 6px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--card-line);
-  font-size: 14px; color: var(--muted);
-}
-.version b { color: var(--text); font-weight: 600; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-.version.ok .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
-.version.err .dot { background: var(--red); }
-
-section { margin-top: 28px; }
-h2 { font-family: Fraunces, Georgia, serif; font-weight: 600; font-size: 22px; margin: 0 0 12px; }
-
-.checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
-.checklist li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 14px; background: var(--card); border: 1px solid var(--card-line); border-radius: 12px; }
-.checklist svg { flex: none; margin-top: 3px; }
-
-.options { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-@media (max-width: 640px) { .options { grid-template-columns: 1fr; } }
-.option {
-  display: flex; flex-direction: column; gap: 10px; padding: 20px;
-  background: var(--card); border: 1px solid var(--card-line); border-radius: 18px;
-  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-}
-.option.primary { border-color: rgba(255, 209, 102, 0.45); box-shadow: 0 0 0 1px rgba(255, 209, 102, 0.15), 0 12px 40px rgba(0, 0, 0, 0.25); }
-.option h3 { margin: 0; font-size: 18px; display: flex; align-items: center; gap: 10px; }
-.option p { margin: 0; color: var(--muted); font-size: 15px; }
-.option .note { font-size: 14px; color: var(--text); background: rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 8px 12px; }
-.option .spacer { flex: 1; }
-.tag { white-space: nowrap; font-size: 12px; font-weight: 600; color: #1a1300; background: var(--gold); padding: 2px 8px; border-radius: 999px; }
-
 esp-web-install-button { display: block; }
-/* until the installer script has loaded, show only the button */
 esp-web-install-button:not(:defined) [slot="unsupported"],
 esp-web-install-button:not(:defined) [slot="not-allowed"] { display: none; }
 .btn {
-  width: 100%; font: inherit; font-weight: 600; font-size: 16px; cursor: pointer;
-  border: 0; border-radius: 12px; padding: 13px 18px; color: #fff;
+  font: inherit; font-weight: 600; font-size: 17px; cursor: pointer;
+  border: 0; border-radius: 999px; padding: 14px 34px; color: #fff;
   background: linear-gradient(180deg, var(--red) 0%, var(--red-2) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 6px 18px rgba(215, 38, 61, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 8px 24px rgba(215, 38, 61, 0.4);
   transition: transform .15s ease, box-shadow .15s ease;
 }
-.btn:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 10px 24px rgba(215, 38, 61, 0.45); }
-.btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
-.btn.secondary { background: transparent; border: 1px solid var(--card-line); box-shadow: none; }
-.btn.secondary:hover { background: rgba(255, 255, 255, 0.08); }
+.btn:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 12px 30px rgba(215, 38, 61, 0.5); }
+.btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
 .btn[disabled] { opacity: .5; cursor: not-allowed; transform: none; }
-.slot-msg { display: block; font-size: 14px; color: #ffd6dc; background: rgba(215, 38, 61, 0.18); border: 1px solid rgba(215, 38, 61, 0.45); border-radius: 10px; padding: 10px 12px; }
-
-.steps { counter-reset: s; list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.steps li { counter-increment: s; position: relative; padding: 12px 14px 12px 54px; background: var(--card); border: 1px solid var(--card-line); border-radius: 12px; }
-.steps li::before {
-  content: counter(s); position: absolute; left: 14px; top: 12px; width: 26px; height: 26px; border-radius: 50%;
-  display: grid; place-items: center; font-weight: 600; font-size: 14px; color: var(--night); background: var(--gold);
-}
-code, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .92em; background: rgba(255, 255, 255, 0.1); padding: 1px 6px; border-radius: 6px; }
-
-details { background: var(--card); border: 1px solid var(--card-line); border-radius: 12px; padding: 0 14px; margin-top: 8px; }
-summary { cursor: pointer; padding: 12px 0; font-weight: 500; }
-details p { margin: 0 0 12px; color: var(--muted); }
-
-footer { text-align: center; color: var(--muted); font-size: 14px; margin-top: 40px; }
-footer .tree { display: block; margin: 0 auto 8px; }
+.slot-msg { display: block; max-width: 360px; font-size: 14px; color: #ffd6dc; background: rgba(215, 38, 61, 0.18); border: 1px solid rgba(215, 38, 61, 0.45); border-radius: 12px; padding: 10px 14px; }
+.version { margin: 0; min-height: 1.6em; font-size: 14px; color: var(--muted); }
 
 @media (prefers-reduced-motion: reduce) {
   .garland .bulb { animation: none; }
@@ -139,184 +83,35 @@ footer .tree { display: block; margin: 0 auto 8px; }
 </head>
 <body>
 <canvas id="snow" aria-hidden="true"></canvas>
-
 <svg class="garland" viewBox="0 0 1200 70" preserveAspectRatio="none" aria-hidden="true" id="garland">
   <path class="wire" d="M0 10 Q 100 50 200 12 T 400 12 T 600 12 T 800 12 T 1000 12 T 1200 10"/>
 </svg>
 
+<nav class="lang" aria-label="Language">
+  <button type="button" data-lang="en">EN</button>
+  <button type="button" data-lang="nl">NL</button>
+  <button type="button" data-lang="fr">FR</button>
+</nav>
+
 <main>
-  <nav class="lang" aria-label="Language">
-    <button type="button" data-lang="en">EN</button>
-    <button type="button" data-lang="nl">NL</button>
-    <button type="button" data-lang="fr">FR</button>
-  </nav>
-
-  <header>
-    <p class="eyebrow" data-i18n="eyebrow">Tree Lights</p>
-    <h1 data-i18n="title">Light up your tree</h1>
-    <p class="lead" data-i18n="lead">Install or update the firmware of your Tree Lights controller straight from this page. No software to download.</p>
-    <div class="version" id="version" role="status"><span class="dot"></span><span id="version-text" data-i18n="checking">Checking the latest firmware…</span></div>
-  </header>
-
-  <section aria-labelledby="h-before">
-    <h2 id="h-before" data-i18n="beforeTitle">Before you start</h2>
-    <ul class="checklist">
-      <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#21a35b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="need1">A computer with <b>Google Chrome</b> or <b>Microsoft Edge</b>. Phones, Safari and Firefox can't do this.</span></li>
-      <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#21a35b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="need2">A USB cable that carries data (some cables only charge).</span></li>
-      <li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7" stroke="#21a35b" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="need3">Plug the small controller board of the tree into the computer.</span></li>
-    </ul>
-  </section>
-
-  <section aria-labelledby="h-choose">
-    <h2 id="h-choose" data-i18n="chooseTitle">Choose what to do</h2>
-    <div class="options">
-      <div class="option primary">
-        <h3><span data-i18n="updTitle">Update my tree</span> <span class="tag" data-i18n="updTag">Most people</span></h3>
-        <p data-i18n="updText">Installs the newest firmware and keeps your light map, effects, timer and Wi-Fi settings.</p>
-        <p class="note" data-i18n="updNote">When asked <b>“Erase device”</b>, leave the box <b>unticked</b> and press Next.</p>
-        <div class="spacer"></div>
-        <esp-web-install-button manifest="firmware/update.json" id="btn-update">
-          <button slot="activate" class="btn" type="button" data-i18n="updBtn">Update firmware</button>
-          <span slot="unsupported" class="slot-msg" data-i18n="unsupported">This browser can't talk to USB devices. Open this page in Google Chrome or Microsoft Edge on a computer.</span>
-          <span slot="not-allowed" class="slot-msg" data-i18n="notAllowed">This page must be opened over https.</span>
-        </esp-web-install-button>
-      </div>
-
-      <div class="option">
-        <h3 data-i18n="newTitle">Fresh install</h3>
-        <p data-i18n="newText">For a brand-new controller, or when the tree doesn't start any more. Erases everything on the board first.</p>
-        <p class="note" data-i18n="newNote">Afterwards you calibrate the tree again and re-enter your home Wi-Fi.</p>
-        <div class="spacer"></div>
-        <esp-web-install-button manifest="firmware/install.json" id="btn-install">
-          <button slot="activate" class="btn secondary" type="button" data-i18n="newBtn">Erase &amp; install</button>
-          <span slot="unsupported" class="slot-msg" data-i18n="unsupported">This browser can't talk to USB devices. Open this page in Google Chrome or Microsoft Edge on a computer.</span>
-          <span slot="not-allowed" class="slot-msg" data-i18n="notAllowed">This page must be opened over https.</span>
-        </esp-web-install-button>
-      </div>
-    </div>
-  </section>
-
-  <section aria-labelledby="h-steps">
-    <h2 id="h-steps" data-i18n="stepsTitle">How it goes</h2>
-    <ol class="steps">
-      <li data-i18n="step1">Click the button. A window lists the USB ports: pick the one that appeared when you plugged the board in (often “CP2102” or “USB-SERIAL CH340”) and press <b>Connect</b>.</li>
-      <li data-i18n="step2">Press <b>Install</b> and confirm. Keep the cable plugged in; it takes about a minute.</li>
-      <li data-i18n="step3">When it says <b>Installation complete</b>, unplug the board and put it back in the tree. The lights come on by themselves.</li>
-      <li data-i18n="step4">On your phone, join the Wi-Fi <span class="mono">ChristmasTree</span> (password <span class="mono">TreeLights2026</span>) and open <span class="mono">http://tree.local</span>, or your usual address if the tree is on your home Wi-Fi.</li>
-    </ol>
-  </section>
-
-  <section aria-labelledby="h-help">
-    <h2 id="h-help" data-i18n="helpTitle">If something doesn't work</h2>
-    <details>
-      <summary data-i18n="q1">No port shows up in the list</summary>
-      <p data-i18n="a1">Try another USB cable: many cables only charge. If it still doesn't appear, the computer needs the USB driver for the board's chip (CH340 or CP2102); search for the driver name, install it and plug the board in again.</p>
-    </details>
-    <details>
-      <summary data-i18n="q2">It fails to connect, or stops halfway</summary>
-      <p data-i18n="a2">Close any other program that might use the port (Arduino IDE, Cura…). Hold the <b>FLASH</b> button on the board, click the install button again, and let go once installing starts.</p>
-    </details>
-    <details>
-      <summary data-i18n="q3">The tree doesn't remember its shape after updating</summary>
-      <p data-i18n="a3">That happens if “Erase device” was ticked. Open the tree's page and run the calibration again (about two minutes).</p>
-    </details>
-  </section>
-
-  <footer>
-    <svg class="tree" width="34" height="40" viewBox="0 0 64 76" aria-hidden="true"><path d="M32 8 12 38h10L8 60h48L42 38h10z" fill="#21a35b"/><rect x="28" y="60" width="8" height="10" fill="#8a5a2b"/><path d="M32 0l2.4 5 5.4.6-4 3.7 1.1 5.3L32 12l-4.9 2.6 1.1-5.3-4-3.7 5.4-.6z" fill="#ffd166"/></svg>
-    <span data-i18n="footer">Happy holidays and merry lighting!</span>
-  </footer>
+  <h1>Tree Lights</h1>
+  <esp-web-install-button manifest="firmware/manifest.json">
+    <button slot="activate" class="btn" type="button" data-i18n="install">Install firmware</button>
+    <span slot="unsupported" class="slot-msg" data-i18n="unsupported">Open this page in Google Chrome or Microsoft Edge on a computer.</span>
+    <span slot="not-allowed" class="slot-msg" data-i18n="notAllowed">This page must be opened over https.</span>
+  </esp-web-install-button>
+  <p class="version" id="version" role="status"></p>
 </main>
 
 <script>
 (function () {
   "use strict";
 
-  // ---------------------------------------------------------------- translations
   var T = {
-    en: {},
-    nl: {
-      eyebrow: "Tree Lights",
-      title: "Laat je boom stralen",
-      lead: "Installeer of update de firmware van je Tree Lights-controller rechtstreeks vanaf deze pagina. Niets te downloaden.",
-      checking: "Nieuwste firmware wordt opgehaald…",
-      beforeTitle: "Voor je begint",
-      need1: "Een computer met <b>Google Chrome</b> of <b>Microsoft Edge</b>. Telefoons, Safari en Firefox kunnen dit niet.",
-      need2: "Een USB-kabel die data doorgeeft (sommige kabels laden alleen op).",
-      need3: "Sluit het kleine controllerbordje van de boom aan op de computer.",
-      chooseTitle: "Kies wat je wilt doen",
-      updTitle: "Mijn boom updaten",
-      updTag: "Meestal dit",
-      updText: "Installeert de nieuwste firmware en behoudt je lichtkaart, effecten, timer en wifi-instellingen.",
-      updNote: "Bij de vraag <b>“Erase device”</b> laat je het vakje <b>leeg</b> en klik je op Next.",
-      updBtn: "Firmware updaten",
-      newTitle: "Nieuwe installatie",
-      newText: "Voor een gloednieuwe controller, of als de boom niet meer opstart. Wist eerst alles op het bordje.",
-      newNote: "Daarna kalibreer je de boom opnieuw en vul je je wifi opnieuw in.",
-      newBtn: "Wissen en installeren",
-      unsupported: "Deze browser kan niet met USB-apparaten praten. Open deze pagina in Google Chrome of Microsoft Edge op een computer.",
-      notAllowed: "Deze pagina moet via https geopend worden.",
-      stepsTitle: "Zo gaat het",
-      step1: "Klik op de knop. Een venster toont de USB-poorten: kies de poort die verscheen toen je het bordje aansloot (vaak “CP2102” of “USB-SERIAL CH340”) en klik op <b>Connect</b>.",
-      step2: "Klik op <b>Install</b> en bevestig. Laat de kabel aangesloten; het duurt ongeveer een minuut.",
-      step3: "Bij <b>Installation complete</b> koppel je het bordje los en plaats je het terug in de boom. De lichtjes gaan vanzelf aan.",
-      step4: "Verbind je telefoon met de wifi <span class=\"mono\">ChristmasTree</span> (wachtwoord <span class=\"mono\">TreeLights2026</span>) en open <span class=\"mono\">http://tree.local</span>, of je gewone adres als de boom op je thuiswifi zit.",
-      helpTitle: "Als iets niet lukt",
-      q1: "Er verschijnt geen poort in de lijst",
-      a1: "Probeer een andere USB-kabel: veel kabels laden alleen op. Verschijnt hij nog steeds niet, dan heeft de computer de USB-driver voor de chip van het bordje nodig (CH340 of CP2102); zoek die driver op, installeer hem en sluit het bordje opnieuw aan.",
-      q2: "Verbinden lukt niet, of het stopt halverwege",
-      a2: "Sluit andere programma's die de poort kunnen gebruiken (Arduino IDE, Cura…). Hou de <b>FLASH</b>-knop op het bordje ingedrukt, klik opnieuw op de installatieknop en laat los zodra het installeren begint.",
-      q3: "De boom kent zijn vorm niet meer na de update",
-      a3: "Dat gebeurt als “Erase device” aangevinkt was. Open de pagina van de boom en kalibreer opnieuw (ongeveer twee minuten).",
-      footer: "Fijne feestdagen en veel lichtplezier!",
-      latest: "Nieuwste firmware",
-      built: "gebouwd op",
-      missing: "De firmware wordt nog klaargezet. Probeer het binnenkort opnieuw."
-    },
-    fr: {
-      eyebrow: "Tree Lights",
-      title: "Illuminez votre sapin",
-      lead: "Installez ou mettez à jour le firmware de votre contrôleur Tree Lights directement depuis cette page. Rien à télécharger.",
-      checking: "Recherche du dernier firmware…",
-      beforeTitle: "Avant de commencer",
-      need1: "Un ordinateur avec <b>Google Chrome</b> ou <b>Microsoft Edge</b>. Les téléphones, Safari et Firefox ne le permettent pas.",
-      need2: "Un câble USB qui transmet les données (certains câbles ne font que charger).",
-      need3: "Branchez la petite carte contrôleur du sapin sur l'ordinateur.",
-      chooseTitle: "Choisissez quoi faire",
-      updTitle: "Mettre à jour mon sapin",
-      updTag: "Le plus courant",
-      updText: "Installe le dernier firmware et garde votre carte des lumières, vos effets, la minuterie et le Wi-Fi.",
-      updNote: "À la question <b>« Erase device »</b>, laissez la case <b>décochée</b> et cliquez sur Next.",
-      updBtn: "Mettre à jour",
-      newTitle: "Installation complète",
-      newText: "Pour un contrôleur neuf, ou quand le sapin ne démarre plus. Efface d'abord tout le contenu de la carte.",
-      newNote: "Ensuite, recalibrez le sapin et saisissez à nouveau votre Wi-Fi.",
-      newBtn: "Effacer et installer",
-      unsupported: "Ce navigateur ne peut pas communiquer avec les appareils USB. Ouvrez cette page dans Google Chrome ou Microsoft Edge sur un ordinateur.",
-      notAllowed: "Cette page doit être ouverte en https.",
-      stepsTitle: "Comment ça se passe",
-      step1: "Cliquez sur le bouton. Une fenêtre liste les ports USB : choisissez celui apparu en branchant la carte (souvent « CP2102 » ou « USB-SERIAL CH340 ») et cliquez sur <b>Connect</b>.",
-      step2: "Cliquez sur <b>Install</b> et confirmez. Laissez le câble branché ; cela prend environ une minute.",
-      step3: "Quand <b>Installation complete</b> s'affiche, débranchez la carte et remettez-la dans le sapin. Les lumières s'allument toutes seules.",
-      step4: "Sur votre téléphone, connectez-vous au Wi-Fi <span class=\"mono\">ChristmasTree</span> (mot de passe <span class=\"mono\">TreeLights2026</span>) et ouvrez <span class=\"mono\">http://tree.local</span>, ou votre adresse habituelle si le sapin est sur votre Wi-Fi.",
-      helpTitle: "Si quelque chose ne marche pas",
-      q1: "Aucun port n'apparaît dans la liste",
-      a1: "Essayez un autre câble USB : beaucoup ne font que charger. S'il n'apparaît toujours pas, l'ordinateur a besoin du pilote USB de la puce de la carte (CH340 ou CP2102) ; cherchez ce pilote, installez-le et rebranchez la carte.",
-      q2: "La connexion échoue, ou s'arrête en cours de route",
-      a2: "Fermez les autres programmes qui pourraient utiliser le port (Arduino IDE, Cura…). Maintenez le bouton <b>FLASH</b> de la carte, cliquez à nouveau sur le bouton d'installation et relâchez dès que l'installation commence.",
-      q3: "Le sapin ne connaît plus sa forme après la mise à jour",
-      a3: "Cela arrive si « Erase device » était coché. Ouvrez la page du sapin et refaites la calibration (environ deux minutes).",
-      footer: "Joyeuses fêtes et belles illuminations !",
-      latest: "Dernier firmware",
-      built: "compilé le",
-      missing: "Le firmware est encore en préparation. Réessayez bientôt."
-    }
+    en: { install: "Install firmware", unsupported: "Open this page in Google Chrome or Microsoft Edge on a computer.", notAllowed: "This page must be opened over https.", version: "Version", missing: "Firmware not available yet." },
+    nl: { install: "Firmware installeren", unsupported: "Open deze pagina in Google Chrome of Microsoft Edge op een computer.", notAllowed: "Deze pagina moet via https geopend worden.", version: "Versie", missing: "Firmware nog niet beschikbaar." },
+    fr: { install: "Installer le firmware", unsupported: "Ouvrez cette page dans Google Chrome ou Microsoft Edge sur un ordinateur.", notAllowed: "Cette page doit être ouverte en https.", version: "Version", missing: "Firmware pas encore disponible." }
   };
-  var EN_EXTRA = { latest: "Latest firmware", built: "built", missing: "The firmware is still being prepared. Please try again soon." };
-
-  var nodes = document.querySelectorAll("[data-i18n]");
-  nodes.forEach(function (n) { T.en[n.getAttribute("data-i18n")] = n.innerHTML; });
-  Object.keys(EN_EXTRA).forEach(function (k) { T.en[k] = EN_EXTRA[k]; });
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
 
@@ -334,17 +129,17 @@ footer .tree { display: block; margin: 0 auto 8px; }
   }
 
   var lang = pickLang();
-  var manifestInfo = null;
+  var manifest = null;   // null: loading, false: missing
+  var vBox = document.getElementById("version");
 
-  function t(k) { return (T[lang] && T[lang][k]) || T.en[k] || ""; }
+  function renderVersion() {
+    if (manifest === null) { vBox.textContent = ""; return; }
+    vBox.textContent = manifest === false ? T[lang].missing : T[lang].version + " " + (manifest.version || "?");
+  }
 
   function apply() {
     document.documentElement.lang = lang;
-    nodes.forEach(function (n) {
-      var k = n.getAttribute("data-i18n");
-      if (k === "checking" && manifestInfo) return;
-      n.innerHTML = t(k);
-    });
+    document.querySelectorAll("[data-i18n]").forEach(function (n) { n.textContent = T[lang][n.getAttribute("data-i18n")]; });
     document.querySelectorAll(".lang button").forEach(function (b) {
       b.setAttribute("aria-pressed", String(b.getAttribute("data-lang") === lang));
     });
@@ -352,86 +147,65 @@ footer .tree { display: block; margin: 0 auto 8px; }
   }
 
   document.querySelectorAll(".lang button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      lang = b.getAttribute("data-lang");
-      store("tl-lang", lang);
-      apply();
-    });
+    b.addEventListener("click", function () { lang = b.getAttribute("data-lang"); store("tl-lang", lang); apply(); });
   });
 
-  // ---------------------------------------------------------------- firmware version
-  var vBox = document.getElementById("version");
-  var vText = document.getElementById("version-text");
-
-  function renderVersion() {
-    if (manifestInfo === null) return;
-    if (manifestInfo === false) {
-      vBox.className = "version err";
-      vText.textContent = t("missing");
-      return;
-    }
-    vBox.className = "version ok";
-    var date = "";
-    if (manifestInfo.build_date) {
-      try {
-        date = " · " + t("built") + " " + new Date(manifestInfo.build_date).toLocaleDateString(lang, { day: "numeric", month: "long", year: "numeric" });
-      } catch (e) { date = ""; }
-    }
-    vText.innerHTML = "";
-    vText.appendChild(document.createTextNode(t("latest") + " "));
-    var b = document.createElement("b");
-    b.textContent = manifestInfo.version || "?";
-    vText.appendChild(b);
-    vText.appendChild(document.createTextNode(date));
-  }
-
-  fetch("firmware/update.json", { cache: "no-store" })
+  fetch("firmware/manifest.json", { cache: "no-store" })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-    .then(function (m) { manifestInfo = m; renderVersion(); })
+    .then(function (m) { manifest = m; renderVersion(); })
     .catch(function () {
-      manifestInfo = false;
+      manifest = false;
       renderVersion();
       document.querySelectorAll("esp-web-install-button .btn").forEach(function (b) { b.disabled = true; });
     });
 
   apply();
 
-  // ---------------------------------------------------------------- garland bulbs
-  (function garland() {
+  // garland bulbs
+  (function () {
     var svg = document.getElementById("garland");
     var ns = "http://www.w3.org/2000/svg";
     var colors = ["#ff4d5e", "#ffd166", "#3ddc84", "#4cc9f0", "#ff9f1c", "#c77dff"];
     var wire = svg.querySelector(".wire");
-    var len = wire.getTotalLength();
-    var count = 24;
+    var len = wire.getTotalLength(), count = 24;
     for (var i = 0; i < count; i++) {
       var p = wire.getPointAtLength((i + 0.5) * len / count);
-      var g = document.createElementNS(ns, "g");
       var c = colors[i % colors.length];
+      var g = document.createElementNS(ns, "g");
       g.setAttribute("class", "bulb");
       g.setAttribute("style", "color:" + c + ";animation-delay:" + (-(i * 0.37) % 2.4).toFixed(2) + "s");
       var cap = document.createElementNS(ns, "rect");
       cap.setAttribute("class", "cap");
-      cap.setAttribute("x", (p.x - 3).toFixed(1)); cap.setAttribute("y", (p.y).toFixed(1));
+      cap.setAttribute("x", (p.x - 3).toFixed(1)); cap.setAttribute("y", p.y.toFixed(1));
       cap.setAttribute("width", "6"); cap.setAttribute("height", "6"); cap.setAttribute("rx", "1");
       var bulb = document.createElementNS(ns, "ellipse");
       bulb.setAttribute("cx", p.x.toFixed(1)); bulb.setAttribute("cy", (p.y + 15).toFixed(1));
-      bulb.setAttribute("rx", "6"); bulb.setAttribute("ry", "10");
-      bulb.setAttribute("fill", c);
-      g.appendChild(cap); g.appendChild(bulb);
-      svg.appendChild(g);
+      bulb.setAttribute("rx", "6"); bulb.setAttribute("ry", "10"); bulb.setAttribute("fill", c);
+      g.appendChild(cap); g.appendChild(bulb); svg.appendChild(g);
     }
   })();
 
-  // ---------------------------------------------------------------- snow
-  (function snow() {
+  // snow
+  (function () {
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var canvas = document.getElementById("snow");
-    var ctx = canvas.getContext("2d");
-    var flakes = [], w = 0, h = 0, dpr = 1, running = true, last = 0;
-
+    var canvas = document.getElementById("snow"), ctx = canvas.getContext("2d");
+    var flakes = [], w = 0, h = 0, running = true, last = 0;
+    function make(anywhere) {
+      var r = Math.random() * 2.4 + 0.6;
+      return { x: Math.random() * w, y: anywhere ? Math.random() * h : -5, r: r, vy: 12 + r * 14, sway: Math.random() * Math.PI * 2, a: 0.35 + Math.random() * 0.55 };
+    }
+    function draw() {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#ffffff";
+      for (var i = 0; i < flakes.length; i++) {
+        var f = flakes[i];
+        ctx.globalAlpha = f.a;
+        ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
     function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
       w = window.innerWidth; h = window.innerHeight;
       canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -440,31 +214,13 @@ footer .tree { display: block; margin: 0 auto 8px; }
       flakes.length = want;
       if (reduce) draw();
     }
-    function make(anywhere) {
-      var r = Math.random() * 2.4 + 0.6;
-      return { x: Math.random() * w, y: anywhere ? Math.random() * h : -5, r: r, vy: 12 + r * 14, sway: Math.random() * Math.PI * 2, a: 0.35 + Math.random() * 0.55 };
-    }
-    function draw() {
-      ctx.clearRect(0, 0, w, h);
-      for (var i = 0; i < flakes.length; i++) {
-        var f = flakes[i];
-        ctx.globalAlpha = f.a;
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
     function step(ts) {
       if (!running) return;
       var dt = last ? Math.min((ts - last) / 1000, 0.05) : 0;
       last = ts;
       for (var i = 0; i < flakes.length; i++) {
         var f = flakes[i];
-        f.sway += dt * 0.8;
-        f.y += f.vy * dt;
-        f.x += Math.sin(f.sway) * 12 * dt;
+        f.sway += dt * 0.8; f.y += f.vy * dt; f.x += Math.sin(f.sway) * 12 * dt;
         if (f.y > h + 5) flakes[i] = make(false);
         if (f.x > w + 5) f.x = -5; else if (f.x < -5) f.x = w + 5;
       }
