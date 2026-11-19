@@ -12,7 +12,7 @@ lang: en
 languages: ["en", "fr"] # change these
 default_lang: "en"
 exclude_from_localization:
-  ["javascript", "images", "css", "public", "assets", "sitemap.xml", "luminous-abyss"]
+  ["javascript", "images", "css", "public", "assets", "sitemap.xml", "luminous-abyss", "treelights-103a1114"]
 parallel_localization: false
 lang_from_path: true
 
@@ -181,6 +181,11 @@ collections:
     sort_by: order
 
 defaults:
+  # Unlisted firmware installer for customers: shared by link only, kept out of the sitemap.
+  - scope:
+      path: treelights-103a1114
+    values:
+      sitemap: false
   - scope:
       path: "" # An empty string here means all files in the project
       type: posts
