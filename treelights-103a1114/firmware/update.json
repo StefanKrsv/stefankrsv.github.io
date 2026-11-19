@@ -1,15 +1,15 @@
 {
   "name": "Tree Lights",
   "version": "3.7",
-  "commit": "7cb65ce",
-  "build_date": "2026-11-19T16:01:29Z",
+  "commit": "921f925",
+  "build_date": "2026-11-19T16:13:36Z",
   "new_install_prompt_erase": true,
   "builds": [
     {
       "chipFamily": "ESP8266",
       "parts": [
         {
-          "path": "treelights-3.7-7cb65ce.bin",
+          "path": "treelights-3.7-921f925.bin",
           "offset": 0
         }
       ]
