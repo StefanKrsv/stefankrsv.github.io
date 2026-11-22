@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#080607">
+<meta name="theme-color" content="#070708">
 <title>Tree Lights Installer</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305070b'/%3E%3Cg fill='%235cf2b0'%3E%3Ccircle cx='32' cy='12' r='4'/%3E%3Ccircle cx='26' cy='24' r='3'/%3E%3Ccircle cx='38' cy='26' r='3'/%3E%3Ccircle cx='22' cy='37' r='3'/%3E%3Ccircle cx='33' cy='39' r='3'/%3E%3Ccircle cx='43' cy='38' r='3'/%3E%3Ccircle cx='17' cy='50' r='3'/%3E%3Ccircle cx='28' cy='52' r='3'/%3E%3Ccircle cx='39' cy='52' r='3'/%3E%3Ccircle cx='49' cy='50' r='3'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -75,6 +75,7 @@ main {
 .stage { position: relative; width: 100%; height: min(52vh, 460px); min-height: 280px; transition: height .45s ease, min-height .45s ease; }
 main:not([data-state="idle"]) .stage { height: min(30vh, 280px); min-height: 180px; }
 #tree { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#wall { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: block; }
 
 h1 { font-weight: 600; font-size: clamp(34px, 7vw, 48px); line-height: 1.05; letter-spacing: -0.03em; margin: 4px 0 10px; }
 .meta { font: 400 12.5px/1.4 var(--mono); color: var(--muted); letter-spacing: .04em; margin: 0 0 28px; min-height: 1.4em; }
@@ -148,11 +149,11 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
   .progress.indeterminate > div, .spinner { animation-duration: 3s; }
 }
 
-:root { --bg: #080607; --accent: #ff4d5e; --accent-ink: #fff; --muted: #a39a9c; --dim: #6b6265; }
+:root { --bg: #070708; --accent: #d81b2c; --accent-ink: #fff; --muted: #a1a6ad; --dim: #7a8088; --danger: #ff5247; }
 body::before { background-image: none; }
-body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(255,77,94,.08), transparent 70%); }
-.btn { color: #fff; box-shadow: 0 0 0 1px rgba(255,77,94,.6), 0 10px 34px rgba(255,77,94,.35); }
-.btn:hover { box-shadow: 0 0 0 1px rgba(255,77,94,.8), 0 14px 44px rgba(255,77,94,.45); }
+body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(216,27,44,.10), transparent 70%); }
+.btn { color: #fff; box-shadow: 0 0 0 1px rgba(232,40,58,.7), 0 10px 34px rgba(216,27,44,.4); }
+.btn:hover { box-shadow: 0 0 0 1px rgba(232,40,58,.9), 0 14px 44px rgba(216,27,44,.55); }
 .brand i { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .specs { display: grid; grid-template-columns: auto 1fr; gap: 8px 22px; margin: 0 0 30px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: 400 13px/1.4 var(--mono); text-align: left; width: 100%; max-width: 380px; }
 .specs dt { color: var(--dim); text-transform: uppercase; letter-spacing: .12em; font-size: 11px; padding-top: 2px; }
@@ -531,7 +532,9 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(255,77,94,.08
   var tree = (function () {
     var canvas = document.getElementById("tree"), ctx = canvas.getContext("2d");
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var TH = {"hue": 356, "spread": 8, "sat": 88, "light": 60, "edge": 25, "unlit": [215, 20, 55], "unlitB": 0.12, "dim": [38, 85, 74], "dimB": 0.18, "idle": ["christmas", "candle", "sweep"], "spin": 0.28, "ring": "255,77,94", "wire": "rgba(255,255,255,0.06)", "glow": 1.1};
+    // classic Christmas palette: red, green and clean white; "hot" LEDs turn white, never pink
+    var RED = [355, 80, 48], GREEN = [140, 70, 42], WHITE = [210, 25, 94], UNLIT = [215, 15, 60];
+    var TH = { spin: 0.28, ring: "216,27,44", wire: "rgba(255,255,255,0.06)", glow: 1.1, idle: ["christmas", "frost", "sweep"] };
     var N = 100, leds = [];
     var seed = 7;
     function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
@@ -544,6 +547,39 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(255,77,94,.08
     }
     var w = 0, h = 0, dpr = 1, rot = 0.6, last = 0, t0 = performance.now();
     var mode = { name: "idle" }, modeAt = 0, shown = 0;   // shown: eased progress
+
+    // A fixed, low-resolution canvas behind the whole page; the browser's smooth upscaling makes the pools soft.
+    var wall = document.createElement("canvas"), wctx = wall.getContext("2d"), WS = 8, ww = 0, wh = 0;
+    wall.id = "wall"; wall.setAttribute("aria-hidden", "true");
+    document.body.insertBefore(wall, document.body.firstChild);
+    function sizeWall() {
+      ww = Math.ceil(window.innerWidth / WS); wh = Math.ceil(window.innerHeight / WS);
+      wall.width = ww; wall.height = wh;
+    }
+    sizeWall();
+    window.addEventListener("resize", sizeWall);
+    var WALL_LEDS = [];   // a dozen LEDs spread over the string act as the room's light sources
+    for (var wi = 4; wi < N; wi += 8) WALL_LEDS.push(wi);
+    function paintWalls(pts, H, cx, base) {
+      var rc = canvas.getBoundingClientRect();
+      var mid = base - H * 0.5, vmin = Math.min(window.innerWidth, window.innerHeight);
+      wctx.clearRect(0, 0, ww, wh);
+      wctx.globalCompositeOperation = "lighter";
+      for (var j = 0; j < WALL_LEDS.length; j++) {
+        var o = pts[WALL_LEDS[j]], br = Math.max(0, o.c[1]);
+        if (br <= 0.02) continue;
+        // thrown outward from the trunk, much further than the LED itself: the glow lands on the walls around the tree
+        var px = (rc.left + cx + (o.sx - cx) * 3.2) / WS, py = (rc.top + mid + (o.sy - mid) * 1.7) / WS;
+        var rad = vmin * (0.28 + 0.14 * (1 - o.p.y)) / WS;
+        var al = Math.min(0.24, 0.15 * br) * (o.z > 0 ? 1 : 0.7)   // lights at the back of the tree light the wall behind it most
+          * (o.c[0][1] < 40 ? 0.45 : 1);   // white lights only haze the wall; the colours carry the mood
+        var g = wctx.createRadialGradient(px, py, 0, px, py, rad);
+        g.addColorStop(0, hsla(o.c[0], al)); g.addColorStop(0.45, hsla(o.c[0], al * 0.4)); g.addColorStop(1, hsla(o.c[0], 0));
+        wctx.fillStyle = g;
+        wctx.fillRect(px - rad, py - rad, rad * 2, rad * 2);
+      }
+      wctx.globalCompositeOperation = "source-over";
+    }
 
     function resize() {
       dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -561,57 +597,48 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(255,77,94,.08
     // colour + brightness of one LED for the current mode
     function shade(p, time) {
       var n = mode.name;
-      if (n === "busy") {
-        var lit = p.y <= shown + 0.001;
+      if (n === "busy") {   // lit from the bottom up to the progress line, which glows white
         var edge = Math.max(0, 1 - Math.abs(p.y - shown) * 14);
-        if (lit) return [hsl(TH.hue + p.y * TH.spread, TH.sat, TH.light + edge * TH.edge), 0.9 + edge * 0.6];
-        return [TH.unlit, TH.unlitB + 0.05 * Math.sin(time * 2 + p.tw)];
+        if (p.y <= shown + 0.001) return [edge > 0.35 ? WHITE : RED, 0.95 + edge * 0.9];
+        return [UNLIT, 0.12 + 0.05 * Math.sin(time * 2 + p.tw)];
       }
-      if (n === "connecting" || n === "ready") {
+      if (n === "connecting" || n === "ready") {   // a red band scans over dim green
         var scan = (Math.sin(time * 1.6) * 0.5 + 0.5) * 1.05 - 0.02;
-        var d = Math.abs(p.y - scan);
-        var b = Math.max(0, 1 - d * 9);
-        return [b > 0.05 ? hsl(TH.hue, TH.sat, TH.light - 7 + b * TH.edge) : TH.dim, TH.dimB + b * 1.1];
+        var b = Math.max(0, 1 - Math.abs(p.y - scan) * 9);
+        return b > 0.05 ? [b > 0.8 ? WHITE : RED, 0.2 + b * 1.1] : [GREEN, 0.2];
       }
-      if (n === "error") {
-        return [[352, 90, 62], 0.35 + 0.3 * (Math.sin(time * 3) * 0.5 + 0.5)];
-      }
+      if (n === "error") return [RED, 0.4 + 0.35 * (Math.sin(time * 3) * 0.5 + 0.5)];
       if (n === "done") {
         var age = time - modeAt;
-        if (age < 5) {
+        if (age < 5) {   // red, green and white with a white ring rising through the tree
           var ring = Math.max(0, 1 - Math.abs(p.y - ((age * 0.6) % 1.2)) * 6);
           var sp = Math.max(0, Math.sin(time * 9 + p.tw * 7)) * 0.5;
-          return [hsl(p.y * 300 + time * 120, 90, TH.light + ring * 20), 0.75 + ring + sp];
+          return [ring > 0.4 ? WHITE : [RED, GREEN, WHITE][p.k % 3], 0.6 + ring + sp];
         }
       }
-      // idle: rotate through the theme's effects, cross-fading
+      // idle: rotate through the effects, cross-fading
       var list = TH.idle, cycle = 9, k = (time / cycle) | 0, ph = (time % cycle) / cycle;
-      var eff = list[k % list.length];
-      var c = idleFx(eff, p, time);
-      if (list.length > 1 && ph > 0.88) {
+      var c = idleFx(list[k % list.length], p, time);
+      if (ph > 0.88) {
         var c2 = idleFx(list[(k + 1) % list.length], p, time), m = (ph - 0.88) / 0.12;
-        return m < 0.5 ? [c[0], c[1] * (1 - m) + c2[1] * m] : [c2[0], c[1] * (1 - m) + c2[1] * m];
+        return [m < 0.5 ? c[0] : c2[0], c[1] * (1 - m) + c2[1] * m];
       }
       return c;
     }
     function idleFx(eff, p, time) {
-      var L = TH.light;
-      if (eff === "sweep") {
-        var ang = time * 0.9;
-        var plane = p.x * Math.cos(ang) + (p.y - 0.5) * 0.6 * Math.sin(ang * 0.7) + p.z * Math.sin(ang);
-        var b = Math.max(0, 1 - Math.abs(plane - Math.sin(time * 1.3) * 0.35) * 10);
-        return [b > 0.05 ? hsl(TH.hue + 13 + b * 40, TH.sat, L - 4 + b * 18) : TH.dim, TH.dimB + 0.17 + b * 1.1];
-      }
-      if (eff === "candle") {
-        var fl = Math.sin(time * 3.1 + p.tw * 5) * 0.5 + Math.sin(time * 7.3 + p.tw * 11) * 0.25;
-        return [hsl(30 + fl * 8, 95, L - 2), 0.6 + fl * 0.35];
-      }
       if (eff === "christmas") {
-        var cols = [[356, 85, L - 6], [140, 70, L - 12], [38, 90, L + 12]];
         var tw = Math.sin(time * 1.7 + p.tw * 3) * 0.5 + 0.5;
-        return [cols[p.k % 3], 0.55 + tw * 0.5];
+        return [[RED, GREEN, WHITE][p.k % 3], 0.55 + tw * 0.5];
       }
-      return [TH.dim, 0.5];
+      if (eff === "frost") {   // cold white with bright glints
+        var g = Math.pow(Math.max(0, Math.sin(time * 1.9 + p.tw * 13)), 18);
+        return [WHITE, 0.3 + g * 1.4 + 0.08 * Math.sin(time + p.tw)];
+      }
+      // sweep: a red plane with a white core passes through a green tree
+      var ang = time * 0.9;
+      var plane = p.x * Math.cos(ang) + (p.y - 0.5) * 0.6 * Math.sin(ang * 0.7) + p.z * Math.sin(ang);
+      var bb = Math.max(0, 1 - Math.abs(plane - Math.sin(time * 1.3) * 0.35) * 10);
+      return bb > 0.05 ? [bb > 0.75 ? WHITE : RED, 0.3 + bb * 1.1] : [GREEN, 0.3];
     }
 
     function frame(now) {
@@ -626,24 +653,27 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(255,77,94,.08
       var H = Math.min(h * 0.8, w * 1.15);
       var cx = w / 2, base = h * 0.9, tilt = 0.16, persp = 2.6;
 
-      // floor rings
-      ctx.save();
-      ctx.lineWidth = 1;
-      for (var k = 0; k < 3; k++) {
-        var rr = H * (0.26 + k * 0.12);
-        ctx.strokeStyle = "rgba(" + TH.ring + "," + (0.14 - k * 0.04) + ")";
-        ctx.setLineDash(k === 1 ? [3, 6] : []);
-        ctx.beginPath(); ctx.ellipse(cx, base, rr, rr * tilt * 1.6, 0, 0, Math.PI * 2); ctx.stroke();
-      }
-      ctx.restore();
-
       var cr = Math.cos(rot), sr = Math.sin(rot), pts = [];
       for (var i = 0; i < N; i++) {
         var p = leds[i];
         var x = p.x * cr - p.z * sr, z = p.x * sr + p.z * cr;
         var s = persp / (persp + z);
-        pts.push({ i: i, p: p, sx: cx + x * H * s, sy: base - p.y * H + z * H * tilt, s: s, z: z });
+        pts.push({ i: i, p: p, sx: cx + x * H * s, sy: base - p.y * H + z * H * tilt, s: s, z: z, c: shade(p, time) });
       }
+
+      // light thrown on the walls of the room: big, faint pools in the LEDs' own colours
+      paintWalls(pts, H, cx, base);
+
+      // floor rings
+      ctx.save();
+      ctx.lineWidth = 1;
+      for (var k = 0; k < 3; k++) {
+        var rr = H * (0.26 + k * 0.12);
+        ctx.strokeStyle = "rgba(" + TH.ring + "," + (0.22 - k * 0.06) + ")";
+        ctx.setLineDash(k === 1 ? [3, 6] : []);
+        ctx.beginPath(); ctx.ellipse(cx, base, rr, rr * tilt * 1.6, 0, 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.restore();
 
       // the wire, in string order
       ctx.strokeStyle = TH.wire;
@@ -655,7 +685,7 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(255,77,94,.08
       pts.sort(function (a, b) { return b.z - a.z; });
       ctx.globalCompositeOperation = "lighter";
       for (var q = 0; q < N; q++) {
-        var o = pts[q], c = shade(o.p, time), col = c[0], br = Math.max(0, c[1]);
+        var o = pts[q], c = o.c, col = c[0], br = Math.max(0, c[1]);
         var depth = 0.55 + 0.45 * (1 - (o.z + 0.45) / 0.9);
         var glowR = (H / 26) * TH.glow * o.s * (0.7 + br * 0.8);
         var a0 = Math.min(1, 0.55 * br * depth);
