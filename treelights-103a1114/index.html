@@ -76,6 +76,9 @@ main {
 main:not([data-state="idle"]) .stage { height: min(30vh, 280px); min-height: 180px; }
 #tree { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 #wall { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; display: block; }
+/* fine film grain over the wall light: breaks up banding in the faint gradients; overlay keeps black areas black */
+#grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; mix-blend-mode: overlay; opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 
 h1 { font-weight: 600; font-size: clamp(34px, 7vw, 48px); line-height: 1.05; letter-spacing: -0.03em; margin: 4px 0 10px; }
 .meta { font: 400 12.5px/1.4 var(--mono); color: var(--muted); letter-spacing: .04em; margin: 0 0 28px; min-height: 1.4em; }
@@ -149,11 +152,12 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
   .progress.indeterminate > div, .spinner { animation-duration: 3s; }
 }
 
-:root { --bg: #070708; --accent: #d81b2c; --accent-ink: #fff; --muted: #a1a6ad; --dim: #7a8088; --danger: #ff5247; }
+:root { --bg: #070708; --accent: #1e9e5a; --accent-fill: #17844b; --accent-ink: #fff; --muted: #a1a6ad; --dim: #7a8088; --danger: #ff5247; }
 body::before { background-image: none; }
-body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(216,27,44,.10), transparent 70%); }
-.btn { color: #fff; box-shadow: 0 0 0 1px rgba(232,40,58,.7), 0 10px 34px rgba(216,27,44,.4); }
-.btn:hover { box-shadow: 0 0 0 1px rgba(232,40,58,.9), 0 14px 44px rgba(216,27,44,.55); }
+body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(30,158,90,.07), transparent 70%); }
+.btn { color: #fff; background: var(--accent-fill); box-shadow: 0 0 0 1px rgba(30,158,90,.7), 0 10px 34px rgba(30,158,90,.35); }
+.btn.ghost { background: transparent; }
+.btn:hover { box-shadow: 0 0 0 1px rgba(30,158,90,.9), 0 14px 44px rgba(30,158,90,.5); }
 .brand i { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .specs { display: grid; grid-template-columns: auto 1fr; gap: 8px 22px; margin: 0 0 30px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: 400 13px/1.4 var(--mono); text-align: left; width: 100%; max-width: 380px; }
 .specs dt { color: var(--dim); text-transform: uppercase; letter-spacing: .12em; font-size: 11px; padding-top: 2px; }
@@ -533,8 +537,8 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(216,27,44,.10
     var canvas = document.getElementById("tree"), ctx = canvas.getContext("2d");
     var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // classic Christmas palette: red, green and clean white; "hot" LEDs turn white, never pink
-    var RED = [355, 80, 48], GREEN = [140, 70, 42], WHITE = [210, 25, 94], UNLIT = [215, 15, 60];
-    var TH = { spin: 0.28, ring: "216,27,44", wire: "rgba(255,255,255,0.06)", glow: 1.1, idle: ["christmas", "frost", "sweep"] };
+    var RED = [355, 80, 48], GREEN = [140, 70, 42], WHITE = [210, 25, 94], UNLIT = [215, 15, 60], ACC = [147, 68, 44];
+    var TH = { spin: 0.28, ring: "30,158,90", wire: "rgba(255,255,255,0.06)", glow: 1.1, idle: ["christmas", "frost", "sweep"] };
     var N = 100, leds = [];
     var seed = 7;
     function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
@@ -548,10 +552,13 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(216,27,44,.10
     var w = 0, h = 0, dpr = 1, rot = 0.6, last = 0, t0 = performance.now();
     var mode = { name: "idle" }, modeAt = 0, shown = 0;   // shown: eased progress
 
-    // A fixed, low-resolution canvas behind the whole page; the browser's smooth upscaling makes the pools soft.
-    var wall = document.createElement("canvas"), wctx = wall.getContext("2d"), WS = 8, ww = 0, wh = 0;
+    // A fixed canvas behind the whole page at half resolution (the pools are soft anyway), with fine grain over it.
+    var wall = document.createElement("canvas"), wctx = wall.getContext("2d"), WS = 2, ww = 0, wh = 0;
     wall.id = "wall"; wall.setAttribute("aria-hidden", "true");
     document.body.insertBefore(wall, document.body.firstChild);
+    var grain = document.createElement("div");
+    grain.id = "grain"; grain.setAttribute("aria-hidden", "true");
+    wall.after(grain);
     function sizeWall() {
       ww = Math.ceil(window.innerWidth / WS); wh = Math.ceil(window.innerHeight / WS);
       wall.width = ww; wall.height = wh;
@@ -599,13 +606,13 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(216,27,44,.10
       var n = mode.name;
       if (n === "busy") {   // lit from the bottom up to the progress line, which glows white
         var edge = Math.max(0, 1 - Math.abs(p.y - shown) * 14);
-        if (p.y <= shown + 0.001) return [edge > 0.35 ? WHITE : RED, 0.95 + edge * 0.9];
+        if (p.y <= shown + 0.001) return [edge > 0.35 ? WHITE : ACC, 0.95 + edge * 0.9];
         return [UNLIT, 0.12 + 0.05 * Math.sin(time * 2 + p.tw)];
       }
-      if (n === "connecting" || n === "ready") {   // a red band scans over dim green
+      if (n === "connecting" || n === "ready") {   // a green band scans over dim white
         var scan = (Math.sin(time * 1.6) * 0.5 + 0.5) * 1.05 - 0.02;
         var b = Math.max(0, 1 - Math.abs(p.y - scan) * 9);
-        return b > 0.05 ? [b > 0.8 ? WHITE : RED, 0.2 + b * 1.1] : [GREEN, 0.2];
+        return b > 0.05 ? [b > 0.8 ? WHITE : ACC, 0.2 + b * 1.1] : [WHITE, 0.14];
       }
       if (n === "error") return [RED, 0.4 + 0.35 * (Math.sin(time * 3) * 0.5 + 0.5)];
       if (n === "done") {
