@@ -1,17 +1,17 @@
 {
   "name": "Tree Lights",
-  "version": "4.5",
-  "commit": "04a03dd",
-  "build_date": "2026-11-21T22:48:32Z",
-  "size": 505728,
-  "md5": "3243b43e10404503f7baa2fe7191e681",
+  "version": "4.6",
+  "commit": "ccaa61d",
+  "build_date": "2026-11-22T16:14:04Z",
+  "size": 546272,
+  "md5": "5549461ec6da3b77c82c5d66b8b18e28",
   "new_install_prompt_erase": true,
   "builds": [
     {
       "chipFamily": "ESP8266",
       "parts": [
         {
-          "path": "treelights-4.5-04a03dd.bin",
+          "path": "treelights-4.6-ccaa61d.bin",
           "offset": 0
         }
       ]
