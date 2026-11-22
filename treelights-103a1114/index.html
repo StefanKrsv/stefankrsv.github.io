@@ -173,6 +173,43 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(30,158,90,.07
 }
 @media (max-width: 899px) { .specs { display: none; } }
 
+/* ---------------------------------------------------------------- motion */
+/* page load: the tree fades up, then the text and the action area rise in turn */
+#tree { animation: tl-fade 1.4s ease-out both; }
+main h1, main .meta, main .specs, main .panel { animation: tl-rise .7s cubic-bezier(.2,.7,.2,1) both; }
+main h1 { animation-delay: .15s; } main .meta, main .specs { animation-delay: .25s; } main .panel { animation-delay: .35s; }
+@keyframes tl-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tl-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+/* buttons: press down, a soft light sweeps across on hover, the main Install button breathes */
+.btn { position: relative; overflow: hidden; transition: transform .18s cubic-bezier(.2,.7,.2,1), box-shadow .25s ease, background .2s ease; }
+.btn::after { content: ""; position: absolute; inset: 0; pointer-events: none; transform: translateX(-120%);
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.22) 50%, transparent 70%); transition: transform .7s ease; }
+.btn:hover::after { transform: translateX(120%); }
+.btn.ghost::after, .btn[disabled]::after { display: none; }
+.btn:active { transform: translateY(0) scale(.97); transition-duration: .08s; }
+#go:not([disabled]) { animation: tl-breathe 3.2s ease-in-out infinite; }
+#go:hover, #go:active { animation: none; }
+@keyframes tl-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(30,158,90,.7), 0 10px 30px rgba(30,158,90,.28); }
+  50% { box-shadow: 0 0 0 1px rgba(30,158,90,.95), 0 12px 48px rgba(30,158,90,.55); }
+}
+.lang button { transition: color .2s ease, background .2s ease, box-shadow .2s ease; }
+.toggle { transition: border-color .2s ease, background .2s ease; }
+.toggle:hover { border-color: var(--line-2); }
+/* done: the check ring pops in and the tick draws itself; error: the heading gives a small shake */
+.ok circle { transform-box: fill-box; transform-origin: center; animation: tl-pop .45s cubic-bezier(.3,1.4,.5,1) .15s both; }
+.ok path { stroke-dasharray: 16; stroke-dashoffset: 16; animation: tl-draw .4s ease-out .45s forwards; }
+@keyframes tl-pop { from { transform: scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes tl-draw { to { stroke-dashoffset: 0; } }
+.panel[data-state="error"] h2 { animation: tl-shake .45s ease-out .2s both; }
+@keyframes tl-shake { 0%, 100% { transform: none; } 20% { transform: translateX(-5px); } 45% { transform: translateX(4px); } 70% { transform: translateX(-2px); } }
+@media (prefers-reduced-motion: reduce) {
+  #tree, main h1, main .meta, main .specs, main .panel, #go:not([disabled]), .panel[data-state="error"] h2, .ok circle { animation: none; }
+  .ok path { animation: none; stroke-dashoffset: 0; }
+  .btn::after { display: none; }
+  .btn:active { transform: none; }
+}
+
 </style>
 </head>
 <body>
@@ -344,7 +381,29 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(30,158,90,.07
   var panel = document.getElementById("panel");
   var meta = document.getElementById("meta");
 
-  function setState(next) { S = next; document.getElementById("main").setAttribute("data-state", next.name); render(); tree.setMode(next); }
+  // Switching modes fades the panel out, swaps its content, and fades the new step in.
+  // Several quick switches share one fade: whatever S is when the old content has faded out is what renders.
+  var reduceUI = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var fading = false;
+  function setState(next) {
+    var prev = S.name;
+    S = next;
+    document.getElementById("main").setAttribute("data-state", next.name);
+    tree.setMode(next);
+    if (fading) return;
+    if (prev === next.name || reduceUI || !panel.animate) { render(); return; }
+    fading = true;
+    panel.style.pointerEvents = "none";   // no double clicks on the content that is leaving
+    var out = panel.animate([{ opacity: 0, transform: "translateY(-6px) scale(.99)" }], { duration: 150, easing: "ease-in", fill: "forwards" });
+    out.onfinish = function () {
+      render();
+      out.cancel();
+      fading = false;
+      panel.style.pointerEvents = "";
+      panel.animate([{ opacity: 0, transform: "translateY(10px) scale(.98)" }, { opacity: 1, transform: "none" }],
+        { duration: 340, easing: "cubic-bezier(.2,.7,.2,1)" });
+    };
+  }
 
   function versionLabel() { return manifest && manifest.version ? "v" + manifest.version : ""; }
 
@@ -521,6 +580,7 @@ body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(30,158,90,.07
   // progress updates arrive often: patch the bar instead of re-rendering the panel
   function updateProgress() {
     tree.setMode(S);
+    if (fading) return;   // the new step renders, with the latest numbers, when its fade-in starts
     var bar = panel.querySelector(".progress > div"), stats = panel.querySelector(".stats");
     if (!bar || !stats) { render(); return; }
     var pct = Math.round(S.pct * 100);
