@@ -155,9 +155,9 @@ details.raw pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0 0
 :root { --bg: #070708; --accent: #1e9e5a; --accent-fill: #17844b; --accent-ink: #fff; --muted: #a1a6ad; --dim: #7a8088; --danger: #ff5247; }
 body::before { background-image: none; }
 body::after { background: radial-gradient(40% 50% at 28% 50%, rgba(30,158,90,.07), transparent 70%); }
-.btn { color: #fff; background: var(--accent-fill); box-shadow: 0 0 0 1px rgba(30,158,90,.7), 0 10px 34px rgba(30,158,90,.35); }
+.btn { color: #fff; background: var(--accent-fill); box-shadow: 0 0 0 1px rgba(30,158,90,.7); }
 .btn.ghost { background: transparent; }
-.btn:hover { box-shadow: 0 0 0 1px rgba(30,158,90,.9), 0 14px 44px rgba(30,158,90,.5); }
+.btn:hover { box-shadow: 0 0 0 1px rgba(30,158,90,1); }
 .brand i { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .specs { display: grid; grid-template-columns: auto 1fr; gap: 8px 22px; margin: 0 0 30px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: 400 13px/1.4 var(--mono); text-align: left; width: 100%; max-width: 380px; }
 .specs dt { color: var(--dim); text-transform: uppercase; letter-spacing: .12em; font-size: 11px; padding-top: 2px; }
@@ -190,8 +190,8 @@ main h1 { animation-delay: .15s; } main .meta, main .specs { animation-delay: .2
 #go:not([disabled]) { animation: tl-breathe 3.2s ease-in-out infinite; }
 #go:hover, #go:active { animation: none; }
 @keyframes tl-breathe {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(30,158,90,.7), 0 10px 30px rgba(30,158,90,.28); }
-  50% { box-shadow: 0 0 0 1px rgba(30,158,90,.95), 0 12px 48px rgba(30,158,90,.55); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(30,158,90,.55); }
+  50% { box-shadow: 0 0 0 1px rgba(30,158,90,1); }
 }
 .lang button { transition: color .2s ease, background .2s ease, box-shadow .2s ease; }
 .toggle { transition: border-color .2s ease, background .2s ease; }
